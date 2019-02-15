@@ -3,6 +3,7 @@ const char* dgemm_desc = "Simple blocked dgemm.";
 #if !defined(BLOCK_SIZE)
   #define BLOCK_SIZE 41
 #endif
+#define BLOCK_SIZE 56
 
 #define min(a,b) (((a) < (b))? (a) : (b))
 
