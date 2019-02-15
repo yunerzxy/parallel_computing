@@ -14,8 +14,8 @@
 COMPILER = $(shell cc --version)
 IS_ICC = $(findstring icc, $(COMPILER))
 
-CC = cc
-OPT = -O2
+CC = cc 
+OPT = -O3 -mavx
 CFLAGS = -Wall -std=gnu99 $(OPT)
 LDFLAGS = -Wall
 # librt is needed for clock_gettime
@@ -24,7 +24,6 @@ LDLIBS = -lrt -lblas
 ifneq (,$(IS_ICC))
 	LDLIBS = -lrt
 endif
-
 
 targets = benchmark-naive benchmark-blocked benchmark-blas
 objects = benchmark.o dgemm-naive.o dgemm-blocked.o dgemm-blas.o  

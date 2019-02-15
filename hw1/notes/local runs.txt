@@ -1,0 +1,18 @@
+#this is from my local computer and is not reflective of cori numbers
+blocked: 5.33
+transpose:	4.2
+transpose blocked: 5.17
+recursive: 5.25
+recursive transpose: 5.59
+queue transpose: 6.06
+
+cori raw runs:
+intel
+	transpose blocked: 11.1
+	
+cray
+	transpose blocked: 15.5
+	transpose: 17.4
+	recursive: 8.2
+	recursive transpose: 17.3
+	queue transpose: 15.4
