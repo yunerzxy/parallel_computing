@@ -178,7 +178,8 @@ int main( int argc, char **argv )
                 bin_Ids[i] = PARICLE_BIN(particles[i]);
             }
 
-            #pragma omp critical
+            #pragma omp single 
+            //not good enough, use lock
             binning(bins);
       
             if( find_option( argc, argv, "-no" ) == -1 ) 
