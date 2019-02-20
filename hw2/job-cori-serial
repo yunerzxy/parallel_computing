@@ -7,4 +7,12 @@
 #SBATCH -o serial.%j.stdout
 #SBATCH -e serial.%j.error
 
-srun -n 1 -c 1 ./serial -n 500 -o serial.txt
+srun -n 1 -c 1 ./serial -n 500 -o -no
+srun -n 1 -c 1 ./serial -n 1000 -o -no 
+srun -n 1 -c 1 ./serial -n 2000 -o no 
+srun -n 1 -c 1 ./serial -n 4000 -o -no 
+srun -n 1 -c 1 ./serial -n 8000 -o -no 
+srun -n 1 -c 1 ./serial -n 10000 -o -no 
+srun -n 1 -c 1 ./serial -n 20000 -o -no 
+srun -n 1 -c 1 ./serial -n 50000 -o -no 
+srun -n 1 -c 1 ./serial -n 100000 -o -no 
