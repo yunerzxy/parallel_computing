@@ -2,8 +2,11 @@
 #include <stdio.h>
 #include <assert.h>
 #include <math.h>
+#include <iostream>
 #include "common.h"
 #include "omp.h"
+
+using namespace std;
 
 #define density 0.0005
 #define cutoff  0.01
@@ -145,64 +148,62 @@ int main( int argc, char **argv )
 
     #pragma omp parallel private(dmin) 
     {
-        int nthrds, id;
-        id = omp_get_thread_num();
-        nthrds = omp_get_num_threads();
-        if (id == 0) numthreads = nthrds;
-    for( int step = 0; step < NSTEPS; step++ )
-    {
-        navg = 0;
-        davg = 0.0;
-        dmin = 1.0;
-        //
-        //  compute all forces
-        //
-        #pragma omp for reduction (+:navg) reduction(+:davg)
-        for( int i = 0; i < particle_num; i++ ) {
-            particles[i].ax = particles[i].ay = 0;
-            // for (int j = 0; j < n; j++ )
-            //     apply_force( particles[i], particles[j],&dmin,&davg,&navg);
-        }
-        for(int i = 0; i < num_bins; ++i){
-            apply_force_bin(particles, bins, i, &dmin, &davg, &navg);
-        }
-        
-        //
-        //  move particles
-        //
-        #pragma omp for
-        for( int i = 0; i < particle_num; i++ ) {
-            move( particles[i] );
-            particles[i].ax = particles[i].ay = 0;
-            bin_Ids[i] = PARICLE_BIN(particles[i]);
-        }
-
-        #pragma omp critical
-        binning(bins);
-  
-        if( find_option( argc, argv, "-no" ) == -1 ) 
+        numthreads = omp_get_num_threads();
+        for( int step = 0; step < NSTEPS; step++ )
         {
-          //
-          //  compute statistical data
-          //
-          #pragma omp master
-          if (navg) { 
-            absavg += davg/navg;
-            nabsavg++;
-          }
+            navg = 0;
+            davg = 0.0;
+            dmin = 1.0;
+            //
+            //  compute all forces
+            //
+            #pragma omp for
+            for( int i = 0; i < particle_num; i++ ) {
+                particles[i].ax = particles[i].ay = 0;
+                // for (int j = 0; j < n; j++ )
+                //     apply_force( particles[i], particles[j],&dmin,&davg,&navg);
+            }
+            #pragma omp for reduction (+:navg) reduction(+:davg)
+            for(int i = 0; i < num_bins; ++i){
+                apply_force_bin(particles, bins, i, &dmin, &davg, &navg);
+            }
+            
+            //
+            //  move particles
+            //
+            #pragma omp for
+            for( int i = 0; i < particle_num; i++ ) {
+                move( particles[i] );
+                particles[i].ax = particles[i].ay = 0;
+                bin_Ids[i] = PARICLE_BIN(particles[i]);
+            }
 
-          #pragma omp critical
-          if (dmin < absmin) absmin = dmin; 
-        
-          //
-          //  save if necessary
-          //
-          #pragma omp master
-          if( fsave && (step%SAVEFREQ) == 0 )
-              save( fsave, particle_num, particles );
+            #pragma omp critical
+            binning(bins);
+      
+            if( find_option( argc, argv, "-no" ) == -1 ) 
+            {
+              //
+              //  compute statistical data
+              //
+              #pragma omp master
+              if (navg) { 
+                absavg += davg/navg;
+                nabsavg++;
+              }
+
+              #pragma omp critical
+              if (dmin < absmin) absmin = dmin; 
+            
+              //
+              //  save if necessary
+              //
+              #pragma omp master
+              if( fsave && (step%SAVEFREQ) == 0 )
+                  save( fsave, particle_num, particles );
+            }
         }
     }
-}
     simulation_time = read_timer( ) - simulation_time;
     
     printf( "n = %d,threads = %d, simulation time = %g seconds", particle_num, numthreads, simulation_time);
