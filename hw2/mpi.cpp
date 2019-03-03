@@ -4,6 +4,7 @@
 #include <assert.h>
 #include "common.h"
 
+using namespace std;
 //
 //  benchmarking program
 //
@@ -103,6 +104,7 @@ int main( int argc, char **argv )
         //
         //  compute all forces
         //
+        cout << "nlocal= " << nlocal << " n= " << n << endl;
         for( int i = 0; i < nlocal; i++ )
         {
             local[i].ax = local[i].ay = 0;
