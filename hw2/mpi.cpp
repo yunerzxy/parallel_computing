@@ -38,6 +38,7 @@ int main( int argc, char **argv )
     //  set up MPI
     //
     int n_proc, rank;
+    cout << "n_proc " << n_proc << " rank " << rank << endl;
     MPI_Init( &argc, &argv );
     MPI_Comm_size( MPI_COMM_WORLD, &n_proc );
     MPI_Comm_rank( MPI_COMM_WORLD, &rank );
@@ -93,7 +94,7 @@ int main( int argc, char **argv )
         // 
         //  collect all global data locally (not good idea to do)
         //
-        //MPI_Allgatherv( local, nlocal, PARTICLE, particles, partition_sizes, partition_offsets, PARTICLE, MPI_COMM_WORLD );
+        MPI_Allgatherv( local, nlocal, PARTICLE, particles, partition_sizes, partition_offsets, PARTICLE, MPI_COMM_WORLD );
         
         //
         //  save current step if necessary (slightly different semantics than in other codes)
