@@ -351,17 +351,17 @@ void exchange_neighbors(double size, imy_particle_t *local_particles,
     //std::vector<int> neighbor_ranks = neighbors_of_rank(rank);
     vector<int> rank_neis = get_rank_neighbors(rank);
     // Send border particles to neighbors
-    for (int i = 0; i < neighbor_ranks.size(); i++) {
-        std::vector<imy_particle_t> border_particles = border_particles_of_rank(neighbor_ranks[i], bins);
-        D(printf("rank %d: exchange_neighbors: sending %lu border particles to rank %d\n", rank, border_particles.size(), neighbor_ranks[i]));
+    for (int i = 0; i < rank_neis.size(); i++) {
+        std::vector<imy_particle_t> border_particles = border_particles_of_rank(rank_neis[i], bins);
+        D(printf("rank %d: exchange_neighbors: sending %lu border particles to rank %d\n", rank, border_particles.size(), rank_neis[i]));
         MPI_Request request;
-        MPI_Ibsend(border_particles.empty() ? 0 : &border_particles[0], border_particles.size(), PARTICLE, neighbor_ranks[i], 0, MPI_COMM_WORLD, &request);
+        MPI_Ibsend(border_particles.empty() ? 0 : &border_particles[0], border_particles.size(), PARTICLE, rank_neis[i], 0, MPI_COMM_WORLD, &request);
         MPI_Request_free(&request);
     }
     // Receive and bin neighbors' border particles
     imy_particle_t *cur_pos = local_particles + *n_local_particles;
-    for (std::vector<int>::const_iterator it = neighbor_ranks.begin();
-         it != neighbor_ranks.end(); it++) {
+    for (std::vector<int>::const_iterator it = rank_neis.begin();
+         it != rank_neis.end(); it++) {
         MPI_Status status;
         MPI_Recv(cur_pos, n, PARTICLE, *it, 0, MPI_COMM_WORLD, &status);
         int num_particles_received;
@@ -382,11 +382,11 @@ void exchange_moved(double size, imy_particle_t **local_particles_ptr,
     // Send moved particles to neighbors
     // Do this scan when moving particles, populating a map from task to particle (still need to do)
     // For each neighbor task
-    for (int i = 0; i < neighbor_ranks.size(); i++) {
+    for (int i = 0; i < rank_neis.size(); i++) {
         std::vector<imy_particle_t> moved_particles;
         // For each bin owned by that task
         for (int b_idx = 0; b_idx < n_bins; b_idx++) {
-            if (rank_of_bin(b_idx) == neighbor_ranks[i]) {
+            if (rank_of_bin(b_idx) == rank_neis[i]) {
                 // For each particle in that bin
                 for (std::list<imy_particle_t*>::const_iterator p_it = bins[b_idx].incoming.begin();
                      p_it != bins[b_idx].incoming.end(); p_it++) {
@@ -396,17 +396,17 @@ void exchange_moved(double size, imy_particle_t **local_particles_ptr,
             }
         }
         // Send the particles to the task
-        D(printf("rank %d: exchange_moved: sending %lu particles to rank %d\n", rank, moved_particles.size(), neighbor_ranks[i]));
+        D(printf("rank %d: exchange_moved: sending %lu particles to rank %d\n", rank, moved_particles.size(), rank_neis[i]));
         MPI_Request request;
-        MPI_Ibsend(moved_particles.empty() ? 0 : &moved_particles[0], moved_particles.size(), PARTICLE, neighbor_ranks[i], 0, MPI_COMM_WORLD, &request);
+        MPI_Ibsend(moved_particles.empty() ? 0 : &moved_particles[0], moved_particles.size(), PARTICLE, rank_neis[i], 0, MPI_COMM_WORLD, &request);
         MPI_Request_free(&request);
     }
 
     // Receive particles moved here
     imy_particle_t *new_local_particles = new imy_particle_t[n];
     imy_particle_t *cur_pos = new_local_particles;
-    for (std::vector<int>::const_iterator it = neighbor_ranks.begin();
-         it != neighbor_ranks.end(); it++) {
+    for (std::vector<int>::const_iterator it = rank_neis.begin();
+         it != rank_neis.end(); it++) {
         MPI_Status status;
         assert(cur_pos < new_local_particles + n);
         MPI_Recv(cur_pos, n, PARTICLE, *it, 0, MPI_COMM_WORLD, &status);
