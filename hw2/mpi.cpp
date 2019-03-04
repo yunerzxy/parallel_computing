@@ -348,7 +348,8 @@ std::vector<imy_particle_t> border_particles_of_rank(int other_rank, std::vector
 
 void exchange_neighbors(double size, imy_particle_t *local_particles,
                         int *n_local_particles, std::vector<bin_t> &bins) {
-    std::vector<int> neighbor_ranks = neighbors_of_rank(rank);
+    //std::vector<int> neighbor_ranks = neighbors_of_rank(rank);
+    vector<int> rank_neis = get_rank_neighbors(rank);
     // Send border particles to neighbors
     for (int i = 0; i < neighbor_ranks.size(); i++) {
         std::vector<imy_particle_t> border_particles = border_particles_of_rank(neighbor_ranks[i], bins);
@@ -376,7 +377,8 @@ void exchange_neighbors(double size, imy_particle_t *local_particles,
 void exchange_moved(double size, imy_particle_t **local_particles_ptr,
                     std::vector<bin_t> &bins, std::vector<int> &local_bin_idxs,
                     int *n_local_particles) {
-    std::vector<int> neighbor_ranks = neighbors_of_rank(rank);
+    //std::vector<int> neighbor_ranks = neighbors_of_rank(rank);
+    vector<int> rank_neis = get_rank_neighbors(rank);
     // Send moved particles to neighbors
     // Do this scan when moving particles, populating a map from task to particle (still need to do)
     // For each neighbor task
