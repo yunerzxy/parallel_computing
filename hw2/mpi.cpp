@@ -72,13 +72,15 @@ int read_int2( int argc, char **argv, const char *option, int default_value );
 char *read_string2( int argc, char **argv, const char *option, char *default_value );
 
 #endif
-//double size;
 //  tuned constants
 #define density 0.0005
 #define mass    0.01
 #define cutoff  0.01
 #define min_r   (cutoff/100)
 #define dt      0.0005
+
+double size;
+
 //  timer
 double read_timer2( )
 {
