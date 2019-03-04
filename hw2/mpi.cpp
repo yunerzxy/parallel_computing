@@ -11,7 +11,6 @@
 #include <string.h>
 #include <math.h>
 #include <sys/time.h>
-#include "common.h"
 
 #ifdef DEBUG
 #define D(x) x
@@ -19,8 +18,8 @@
 #define D(x)
 #endif
 
-// #ifndef __CS267_COMMON_H__
-// #define __CS267_COMMON_H__
+#ifndef __CS267_COMMON_H__
+#define __CS267_COMMON_H__
 
 inline int min( int a, int b ) { return a < b ? a : b; }
 inline int max( int a, int b ) { return a > b ? a : b; }
@@ -70,9 +69,9 @@ void save2( FILE *f, int n, my_particle_t *p );
 int find_option2( int argc, char **argv, const char *option );
 int read_int2( int argc, char **argv, const char *option, int default_value );
 char *read_string2( int argc, char **argv, const char *option, char *default_value );
-//#endif
+#endif
 
-//double size;
+double size;
 //  tuned constants
 #define density 0.0005
 #define mass    0.01
