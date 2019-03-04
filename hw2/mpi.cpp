@@ -304,7 +304,7 @@ vector<int> get_rank_neighbors(int rank) {
 //     }
 //}
 void assign_particles_to_bins(int n, double canvas_side_len, imy_particle_t *particles, vector<bin_t> &bins) {
-    for (auto &p : *particles) {
+    for (imy_particle_t &p : *particles) {
         int b_idx = p.particle.bin_idx = bin_of_particle(canvas_side_len, p);
         bins[b_idx].particles.push_back(p);
     }
@@ -332,8 +332,9 @@ std::vector<int> bins_of_rank(int rank) {
     }
     return result;
 }
-//xiaoyun
 
+
+//xiaoyun
 /** Returns the particles owned by the current rank in bins bordering on other_rank. */
 std::vector<imy_particle_t> border_particles_of_rank(int other_rank, std::vector<bin_t> &bins) {
     int row;
