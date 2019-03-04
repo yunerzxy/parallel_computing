@@ -74,6 +74,8 @@ char *read_string2( int argc, char **argv, const char *option, char *default_val
 #endif
 
 //double size;
+double canvas_side_len;
+
 //  tuned constants
 #define density 0.0005
 #define mass    0.01
@@ -144,14 +146,14 @@ void move2( my_particle_t &p )
     //
     //  bounce from walls
     //
-    while( p.x < 0 || p.x > size )
+    while( p.x < 0 || p.x > canvas_side_len )
     {
-        p.x  = p.x < 0 ? -p.x : 2*size-p.x;
+        p.x  = p.x < 0 ? -p.x : 2*canvas_side_len-p.x;
         p.vx = -p.vx;
     }
-    while( p.y < 0 || p.y > size )
+    while( p.y < 0 || p.y > canvas_side_len )
     {
-        p.y  = p.y < 0 ? -p.y : 2*size-p.y;
+        p.y  = p.y < 0 ? -p.y : 2*canvas_side_len-p.y;
         p.vy = -p.vy;
     }
 }
@@ -164,7 +166,7 @@ void save2( FILE *f, int n, my_particle_t *p )
     static bool first = true;
     if( first )
     {
-        fprintf( f, "%d %g\n", n, size );
+        fprintf( f, "%d %g\n", n, canvas_side_len );
         first = false;
     }
     for( int i = 0; i < n; i++ )
@@ -540,25 +542,25 @@ int main(int argc, char **argv)
     // Initialize and bin particles
     imy_particle_t *particles = (imy_particle_t*) malloc(n * sizeof(imy_particle_t));
     //size = sqrt( density * n );
-    size = sqrt(density * n);
+    canvas_side_len = sqrt(density * n);
     bins_per_side = read_int2(argc, argv, "-b", max(1, sqrt(0.0005 * n) / (0.01 * 3)));
     D(printf("%d bins per side\n", bins_per_side));
     n_bins = bins_per_side * bins_per_side;
     rows_per_proc = ceil(bins_per_side / (float)n_proc);
     D(printf("%d rows per proc\n", rows_per_proc));
     if (rank == 0) {
-        init_iparticles(n, size, particles);
+        init_iparticles(n, canvas_side_len, particles);
     }
     // Allocate local particle buffer
     imy_particle_t *local_particles = (imy_particle_t*) malloc(n * sizeof(imy_particle_t));
     int n_local_particles;
     init_my_particle_type();
     // Populate local particle buffers
-    scatter_particles(size, particles, local_particles, &n_local_particles);
+    scatter_particles(canvas_side_len, particles, local_particles, &n_local_particles);
     // Initialize local bins
     std::vector<bin_t> bins;
     std::vector<int> local_bin_idxs = bins_of_rank(rank);
-    init_bins(n_local_particles, size, local_particles, bins);
+    init_bins(n_local_particles, canvas_side_len, local_particles, bins);
     //
     //  simulate a number of time steps
     //
@@ -570,7 +572,7 @@ int main(int argc, char **argv)
         davg = 0.0;
 
         // Populate bins with neighboring bins
-        exchange_neighbors(size, local_particles, &n_local_particles, bins);
+        exchange_neighbors(canvas_side_len, local_particles, &n_local_particles, bins);
 
         // Zero out the accelerations
         for (int i = 0; i < n_local_particles; i++) {
@@ -631,7 +633,7 @@ int main(int argc, char **argv)
             while (it != bins[b].particles.end()) {
                 imy_particle_t *p = *it;
                 move2(p->particle);
-                int new_b_idx = bin_of_particle(size, *p);
+                int new_b_idx = bin_of_particle(canvas_side_len, *p);
                 if (new_b_idx != b) {
                     bin_t *new_bin = &bins[new_b_idx];
                     p->particle.bin_idx = new_b_idx;
@@ -650,7 +652,7 @@ int main(int argc, char **argv)
             bins[b].incoming.clear();
         }
 
-        exchange_moved(size, &local_particles, bins, local_bin_idxs, &n_local_particles);
+        exchange_moved(canvas_side_len, &local_particles, bins, local_bin_idxs, &n_local_particles);
 
         //
         //  save current step if necessary
