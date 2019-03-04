@@ -73,7 +73,7 @@ int read_int2( int argc, char **argv, const char *option, int default_value );
 char *read_string2( int argc, char **argv, const char *option, char *default_value );
 #endif
 
-double size;
+//double size;
 //  tuned constants
 #define density 0.0005
 #define mass    0.01
