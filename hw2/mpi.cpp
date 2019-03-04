@@ -11,7 +11,7 @@
 #include <string.h>
 #include <math.h>
 #include <sys/time.h>
-#include <common.h>
+#include "common.h"
 
 #ifdef DEBUG
 #define D(x) x
