@@ -223,7 +223,7 @@ struct bin_t {
     std::list<imy_particle_t*> incoming;
 };
 
-int rank_of_bin(int b_idx);
+//int rank_of_bin(int b_idx);
 void init_bins(int n, double size, imy_particle_t *particles, std::vector<bin_t> &bins);
 
 void init_iparticles(int n, double size, imy_particle_t *p) {
@@ -304,9 +304,9 @@ vector<int> get_rank_neighbors(int rank) {
 //     }
 //}
 void assign_particles_to_bins(int n, double canvas_side_len, imy_particle_t *particles, vector<bin_t> &bins) {
-    for (auto p : particles) {
+    for (auto &p : particles) {
         int b_idx = p.particle.bin_idx = bin_of_particle(canvas_side_len, p);
-        bins[b_idx].particles.push_back(&p);
+        bins[b_idx].particles.push_back(p);
     }
 }
 
@@ -316,8 +316,12 @@ int rank_of_bin(int b_idx) {
     int b_row = b_idx % bins_per_side;
     return b_row / rows_per_proc;
 }
-//xiaoyun
+// int get_bin_rank(int b_idx) {
+//     int b_row = b_idx % bins_per_side;
+//     return b_row / rows_per_proc;
+// }
 
+//xiaoyun
 std::vector<int> bins_of_rank(int rank) {
     std::vector<int> result;
     for (int row = rank * rows_per_proc;
@@ -348,7 +352,7 @@ std::vector<imy_particle_t> border_particles_of_rank(int other_rank, std::vector
                 result.push_back(**it);
                 n_particles++;
             }
-            assert(rank_of_bin(row + col * bins_per_side) == rank);
+            assert(get_bin_rank(row + col * bins_per_side) == rank);
         }
     }
     return result;
@@ -394,7 +398,7 @@ void exchange_moved(double size, imy_particle_t **local_particles_ptr,
         std::vector<imy_particle_t> moved_particles;
         // For each bin owned by that task
         for (int b_idx = 0; b_idx < n_bins; b_idx++) {
-            if (rank_of_bin(b_idx) == rank_neis[i]) {
+            if (get_bin_rank(b_idx) == rank_neis[i]) {
                 // For each particle in that bin
                 for (std::list<imy_particle_t*>::const_iterator p_it = bins[b_idx].incoming.begin();
                      p_it != bins[b_idx].incoming.end(); p_it++) {
@@ -478,7 +482,7 @@ void scatter_particles(double size, imy_particle_t *particles, imy_particle_t *l
             int sendcnt = 0;
             for (int k = 0; k < n; k++) {
                 particles[k].particle.bin_idx = bin_of_particle(size, particles[k]);
-                int rb = rank_of_bin(particles[k].particle.bin_idx);
+                int rb = get_bin_rank(particles[k].particle.bin_idx);
                 assert(rb >= 0);
                 assert(rb < n_proc);
                 if (rb == r) {
