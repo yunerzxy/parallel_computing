@@ -381,7 +381,7 @@ vector<imy_particle_t> get_rank_border_particles(int nei_rank, vector<bin_t> &bi
             result.push_back(**it);
             n_particles++;
         }
-        assert(rank_of_bin(row + col * bins_per_side) == rank);
+        assert(get_bin_rank(row + col * bins_per_side) == rank);
     }
     return res;
 }
