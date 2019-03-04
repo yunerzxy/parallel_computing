@@ -322,17 +322,24 @@ int get_bin_rank(int b_idx) {
 }
 
 //xiaoyun
-std::vector<int> bins_of_rank(int rank) {
-    std::vector<int> result;
-    for (int row = rank * rows_per_proc;
-         row < min((rank + 1) * rows_per_proc, bins_per_side); row++) {
-        for (int col = 0; col < bins_per_side; col++) {
-            result.push_back(row + col * bins_per_side);
-        }
-    }
-    return result;
+// std::vector<int> bins_of_rank(int rank) {
+//     std::vector<int> result;
+//     for (int row = rank * rows_per_proc;
+//          row < min((rank + 1) * rows_per_proc, bins_per_side); row++) {
+//         for (int col = 0; col < bins_per_side; col++) {
+//             result.push_back(row + col * bins_per_side);
+//         }
+//     }
+//     return result;
+// }
+vector<int> bins_of_rank(int rank) {
+    vector<int> res;
+    int row_s = rank * rows_per_proc, row_e = min(bins_per_side, rows_per_proc * (rank + 1));
+    for (int row = row_s; row < row_e; ++row)
+        for (int col = 0; col < bins_per_side; ++col)
+            res.push_back(row + col * bins_per_side);
+    return res;
 }
-
 
 //xiaoyun
 /** Returns the particles owned by the current rank in bins bordering on other_rank. */
