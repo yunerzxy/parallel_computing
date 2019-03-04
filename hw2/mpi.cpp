@@ -12,6 +12,8 @@
 #include <math.h>
 #include <sys/time.h>
 
+using namespace std;
+
 #ifdef DEBUG
 #define D(x) x
 #else
@@ -258,24 +260,40 @@ void init_iparticles(int n, double size, imy_particle_t *p) {
     free( shuffle );
 }
 
-int bin_of_particle(double size, imy_particle_t &particle) {
-    double sidelength = size / bins_per_side;
-    int b_row = (int)(particle.particle.x / sidelength);
-    int b_col = (int)(particle.particle.y / sidelength);
-    return b_row + b_col * bins_per_side;
+//xiaoyun
+// int bin_of_particle(double size, imy_particle_t &particle) {
+//     double sidelength = size / bins_per_side;
+//     int b_row = (int)(particle.particle.x / sidelength);
+//     int b_col = (int)(particle.particle.y / sidelength);
+//     return b_row + b_col * bins_per_side;
+// }
+int bin_of_particle(double size, imy_particle_t &p) {
+    double bin_side_len = size / bins_per_side;
+    int row_b = floor(p.particle.x / bin_side_len), col_b = floor(p.particle.y / bin_side_len);
+    return row_b + col_b * bins_per_side;
 }
 
-std::vector<int> neighbors_of_rank(int rank) {
-    std::vector<int> neighbor_ranks;
-    if (rank > 0) {
-        neighbor_ranks.push_back(rank - 1);
-    }
-    if (rank < n_proc - 1) {
-        neighbor_ranks.push_back(rank + 1);
-    }
-    return neighbor_ranks;
+//xiaoyun
+// std::vector<int> neighbors_of_rank(int rank) {
+//     std::vector<int> neighbor_ranks;
+//     if (rank > 0) {
+//         neighbor_ranks.push_back(rank - 1);
+//     }
+//     if (rank < n_proc - 1) {
+//         neighbor_ranks.push_back(rank + 1);
+//     }
+//     return neighbor_ranks;
+// }
+vector<int> get_rank_neighbors(int rank) {
+    std::vector<int> rank_neis;
+    if (rank > 0)
+        rank_neis.push_back(rank - 1);
+    if (rank + 1 < n_proc)
+        rank_neis.push_back(rank + 1);
+    return rank_neis;
 }
 
+//xiaoyun
 void assign_particles_to_bins(int n, double size, imy_particle_t *particles, std::vector<bin_t> &bins) {
     // Put each particle in its bin
     for (int k = 0; k < n; k++) {
@@ -283,12 +301,14 @@ void assign_particles_to_bins(int n, double size, imy_particle_t *particles, std
         bins[b_idx].particles.push_back(&particles[k]);
     }
 }
+//xiaoyun
 
 int rank_of_bin(int b_idx) {
     // 2D partitioning (still need to do)
     int b_row = b_idx % bins_per_side;
     return b_row / rows_per_proc;
 }
+//xiaoyun
 
 std::vector<int> bins_of_rank(int rank) {
     std::vector<int> result;
@@ -300,6 +320,7 @@ std::vector<int> bins_of_rank(int rank) {
     }
     return result;
 }
+//xiaoyun
 
 /** Returns the particles owned by the current rank in bins bordering on other_rank. */
 std::vector<imy_particle_t> border_particles_of_rank(int other_rank, std::vector<bin_t> &bins) {
