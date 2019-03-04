@@ -94,12 +94,6 @@ double read_timer2( )
     gettimeofday( &end, NULL );
     return (end.tv_sec - start.tv_sec) + 1.0e-6 * (end.tv_usec - start.tv_usec);
 }
-//  keep density constant
-void set_size2( int n )
-{
-    size2 = sqrt( density * n );
-}
-
 
 //
 //  interact two particles
@@ -524,7 +518,7 @@ int main(int argc, char **argv)
     FILE *fsum = sumname && rank == 0 ? fopen (sumname, "a") : NULL;
     // Initialize and bin particles
     imy_particle_t *particles = (imy_particle_t*) malloc(n * sizeof(imy_particle_t));
-    set_size2(n);
+    size2 = sqrt( density * n );
     double size = sqrt(0.0005 * n);
     bins_per_side = read_int2(argc, argv, "-b", max(1, sqrt(0.0005 * n) / (0.01 * 3)));
     D(printf("%d bins per side\n", bins_per_side));
