@@ -304,22 +304,22 @@ vector<int> get_rank_neighbors(int rank) {
 //     }
 //}
 void assign_particles_to_bins(int n, double canvas_side_len, imy_particle_t *particles, vector<bin_t> &bins) {
-    for (auto &p : particles) {
+    for (imy_particle_t &p : particles) {
         int b_idx = p.particle.bin_idx = bin_of_particle(canvas_side_len, p);
         bins[b_idx].particles.push_back(p);
     }
 }
 
 //xiaoyun
-int rank_of_bin(int b_idx) {
-    // 2D partitioning (still need to do)
-    int b_row = b_idx % bins_per_side;
-    return b_row / rows_per_proc;
-}
-// int get_bin_rank(int b_idx) {
+// int rank_of_bin(int b_idx) {
+//     // 2D partitioning (still need to do)
 //     int b_row = b_idx % bins_per_side;
 //     return b_row / rows_per_proc;
 // }
+int get_bin_rank(int b_idx) {
+    int b_row = b_idx % bins_per_side;
+    return b_row / rows_per_proc;
+}
 
 //xiaoyun
 std::vector<int> bins_of_rank(int rank) {
