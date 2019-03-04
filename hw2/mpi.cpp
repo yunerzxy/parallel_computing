@@ -376,7 +376,7 @@ vector<imy_particle_t> get_rank_border_particles(int nei_rank, vector<bin_t> &bi
     for (int col = 0; col < bins_per_side; ++col) {
         bin_t &b = bins[row + col * bins_per_side];
         int n_particles = 0;
-        for (const auto p = b.particles.begin();
+        for (const auto &p = b.particles.begin();
              p != b.particles.end(); p++) {
             res.push_back(*p);
             n_particles++;
