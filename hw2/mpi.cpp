@@ -334,7 +334,8 @@ int get_bin_rank(int b_idx) {
 // }
 vector<int> bins_of_rank(int rank) {
     vector<int> res;
-    int row_s = rank * rows_per_proc, row_e = min(bins_per_side, rows_per_proc * (rank + 1));
+    int row_s = rank * rows_per_proc, 
+        row_e = min(bins_per_side, rows_per_proc * (rank + 1));
     for (int row = row_s; row < row_e; ++row)
         for (int col = 0; col < bins_per_side; ++col)
             res.push_back(row + col * bins_per_side);
@@ -343,36 +344,56 @@ vector<int> bins_of_rank(int rank) {
 
 //xiaoyun
 /** Returns the particles owned by the current rank in bins bordering on other_rank. */
-std::vector<imy_particle_t> border_particles_of_rank(int other_rank, std::vector<bin_t> &bins) {
+// std::vector<imy_particle_t> border_particles_of_rank(int other_rank, std::vector<bin_t> &bins) {
+//     int row;
+//     if (other_rank < rank) {
+//         row = rank * rows_per_proc; // first row of rank
+//     } else {
+//         row = (rank + 1) * rows_per_proc - 1; // last row of rank, possibly out of bounds
+//     }
+//     std::vector<imy_particle_t> result;
+//     if (row >= 0 && row < bins_per_side) {
+//         for (int col = 0; col < bins_per_side; col++) {
+//             bin_t &b = bins[row + col * bins_per_side];
+//             int n_particles = 0;
+//             for (std::list<imy_particle_t*>::const_iterator it = b.particles.begin();
+//                  it != b.particles.end(); it++) {
+//                 result.push_back(**it);
+//                 n_particles++;
+//             }
+//             assert(get_bin_rank(row + col * bins_per_side) == rank);
+//         }
+//     }
+//     return result;
+// }
+vector<imy_particle_t> get_rank_border_particles(int nei_rank, vector<bin_t> &bins) {
     int row;
-    if (other_rank < rank) {
-        row = rank * rows_per_proc; // first row of rank
-    } else {
-        row = (rank + 1) * rows_per_proc - 1; // last row of rank, possibly out of bounds
-    }
-    std::vector<imy_particle_t> result;
-    if (row >= 0 && row < bins_per_side) {
-        for (int col = 0; col < bins_per_side; col++) {
-            bin_t &b = bins[row + col * bins_per_side];
-            int n_particles = 0;
-            for (std::list<imy_particle_t*>::const_iterator it = b.particles.begin();
-                 it != b.particles.end(); it++) {
-                result.push_back(**it);
-                n_particles++;
-            }
-            assert(get_bin_rank(row + col * bins_per_side) == rank);
+    if (nei_rank < rank) row = rank * rows_per_proc;
+    else row = rows_per_proc * (rank + 1) - 1;
+    
+    vector<imy_particle_t> res;
+    if (row < 0 || row >= bins_per_side) return res;
+    for (int col = 0; col < bins_per_side; ++col) {
+        bin_t &b = bins[row + col * bins_per_side];
+        int n_particles = 0;
+        for (const auto p = b.particles.begin();
+             p != b.particles.end(); p++) {
+            res.push_back(*p);
+            n_particles++;
         }
+        assert(rank_of_bin(row + col * bins_per_side) == rank);
     }
-    return result;
+    return res;
 }
+
 
 void exchange_neighbors(double size, imy_particle_t *local_particles,
                         int *n_local_particles, std::vector<bin_t> &bins) {
     //std::vector<int> neighbor_ranks = neighbors_of_rank(rank);
     vector<int> rank_neis = get_rank_neighbors(rank);
     // Send border particles to neighbors
-    for (int i = 0; i < rank_neis.size(); i++) {
-        std::vector<imy_particle_t> border_particles = border_particles_of_rank(rank_neis[i], bins);
+    for (int i = 0; i < rank_neis.size(); ++i) {
+        vector<imy_particle_t> border_particles = get_rank_border_particles(rank_neis[i], bins);
         D(printf("rank %d: exchange_neighbors: sending %lu border particles to rank %d\n", rank, border_particles.size(), rank_neis[i]));
         MPI_Request request;
         MPI_Ibsend(border_particles.empty() ? 0 : &border_particles[0], border_particles.size(), PARTICLE, rank_neis[i], 0, MPI_COMM_WORLD, &request);
