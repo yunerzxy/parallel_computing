@@ -11,6 +11,7 @@
 #include <string.h>
 #include <math.h>
 #include <sys/time.h>
+#include <common.h>
 
 #ifdef DEBUG
 #define D(x) x
@@ -57,7 +58,6 @@ double read_timer2( );
 void apply_force2( my_particle_t &particle, my_particle_t &neighbor , double *dmin, double *davg, int *navg);
 void move2( my_particle_t &p );
 
-
 //
 //  I/O routines
 //
@@ -70,17 +70,15 @@ void save2( FILE *f, int n, my_particle_t *p );
 int find_option2( int argc, char **argv, const char *option );
 int read_int2( int argc, char **argv, const char *option, int default_value );
 char *read_string2( int argc, char **argv, const char *option, char *default_value );
-
 #endif
+
+//double size;
 //  tuned constants
 #define density 0.0005
 #define mass    0.01
 #define cutoff  0.01
 #define min_r   (cutoff/100)
 #define dt      0.0005
-
-double size;
-
 //  timer
 double read_timer2( )
 {
