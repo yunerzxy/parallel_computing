@@ -263,6 +263,19 @@ void init_iparticles(int n, double size, imy_particle_t *p) {
 }
 
 //xiaoyun
+// int bin_of_particle(double size, imy_particle_t &particle) {
+//     double sidelength = size / bins_per_side;
+//     int b_row = (int)(particle.particle.x / sidelength);
+//     int b_col = (int)(particle.particle.y / sidelength);
+//     return b_row + b_col * bins_per_side;
+// }
+int bin_of_particle(double canvas_side_len, imy_particle_t &p) {
+    double bin_side_len = canvas_side_len / bins_per_side;
+    int row_b = floor(p.particle.x / bin_side_len), col_b = floor(p.particle.y / bin_side_len);
+    return row_b + col_b * bins_per_side;
+}
+
+//xiaoyun
 // std::vector<int> neighbors_of_rank(int rank) {
 //     std::vector<int> neighbor_ranks;
 //     if (rank > 0) {
@@ -298,16 +311,35 @@ void assign_particles_to_bins(int n, double canvas_side_len, imy_particle_t *par
 }
 
 //xiaoyun
-// int bin_of_particle(double size, imy_particle_t &particle) {
-//     double sidelength = size / bins_per_side;
-//     int b_row = (int)(particle.particle.x / sidelength);
-//     int b_col = (int)(particle.particle.y / sidelength);
-//     return b_row + b_col * bins_per_side;
+// int rank_of_bin(int b_idx) {
+//     // 2D partitioning (still need to do)
+//     int b_row = b_idx % bins_per_side;
+//     return b_row / rows_per_proc;
 // }
-int bin_of_particle(double canvas_side_len, imy_particle_t &p) {
-    double bin_side_len = canvas_side_len / bins_per_side;
-    int row_b = floor(p.particle.x / bin_side_len), col_b = floor(p.particle.y / bin_side_len);
-    return row_b + col_b * bins_per_side;
+int get_bin_rank(int b_idx) {
+    int b_row = b_idx % bins_per_side;
+    return b_row / rows_per_proc;
+}
+
+//xiaoyun
+// std::vector<int> bins_of_rank(int rank) {
+//     std::vector<int> result;
+//     for (int row = rank * rows_per_proc;
+//          row < min((rank + 1) * rows_per_proc, bins_per_side); row++) {
+//         for (int col = 0; col < bins_per_side; col++) {
+//             result.push_back(row + col * bins_per_side);
+//         }
+//     }
+//     return result;
+// }
+vector<int> bins_of_rank(int rank) {
+    vector<int> res;
+    int row_s = rank * rows_per_proc, 
+        row_e = min(bins_per_side, rows_per_proc * (rank + 1));
+    for (int row = row_s; row < row_e; ++row)
+        for (int col = 0; col < bins_per_side; ++col)
+            res.push_back(row + col * bins_per_side);
+    return res;
 }
 
 //xiaoyun
@@ -346,43 +378,11 @@ vector<imy_particle_t> get_rank_border_particles(int nei_rank, vector<bin_t> &bi
         int n_particles = 0;
         for (list<imy_particle_t*>::const_iterator it = b.particles.begin(); 
             it != b.particles.end(); it++) {
-            res.push_back(**it);
+            result.push_back(**it);
             n_particles++;
         }
         assert(get_bin_rank(row + col * bins_per_side) == rank);
     }
-    return res;
-}
-
-//xiaoyun
-// int rank_of_bin(int b_idx) {
-//     // 2D partitioning (still need to do)
-//     int b_row = b_idx % bins_per_side;
-//     return b_row / rows_per_proc;
-// }
-int get_bin_rank(int b_idx) {
-    int b_row = b_idx % bins_per_side;
-    return b_row / rows_per_proc;
-}
-
-//xiaoyun
-// std::vector<int> bins_of_rank(int rank) {
-//     std::vector<int> result;
-//     for (int row = rank * rows_per_proc;
-//          row < min((rank + 1) * rows_per_proc, bins_per_side); row++) {
-//         for (int col = 0; col < bins_per_side; col++) {
-//             result.push_back(row + col * bins_per_side);
-//         }
-//     }
-//     return result;
-// }
-vector<int> bins_of_rank(int rank) {
-    vector<int> res;
-    int row_s = rank * rows_per_proc, 
-        row_e = min(bins_per_side, rows_per_proc * (rank + 1));
-    for (int row = row_s; row < row_e; ++row)
-        for (int col = 0; col < bins_per_side; ++col)
-            res.push_back(row + col * bins_per_side);
     return res;
 }
 
