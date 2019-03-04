@@ -54,7 +54,6 @@ double read_timer2( );
 //
 //  simulation routines
 //
-void set_size2( int n );
 void apply_force2( my_particle_t &particle, my_particle_t &neighbor , double *dmin, double *davg, int *navg);
 void move2( my_particle_t &p );
 
@@ -73,7 +72,7 @@ int read_int2( int argc, char **argv, const char *option, int default_value );
 char *read_string2( int argc, char **argv, const char *option, char *default_value );
 
 #endif
-double size2;
+double size;
 //  tuned constants
 #define density 0.0005
 #define mass    0.01
@@ -144,14 +143,14 @@ void move2( my_particle_t &p )
     //
     //  bounce from walls
     //
-    while( p.x < 0 || p.x > size2 )
+    while( p.x < 0 || p.x > size )
     {
-        p.x  = p.x < 0 ? -p.x : 2*size2-p.x;
+        p.x  = p.x < 0 ? -p.x : 2*size-p.x;
         p.vx = -p.vx;
     }
-    while( p.y < 0 || p.y > size2 )
+    while( p.y < 0 || p.y > size )
     {
-        p.y  = p.y < 0 ? -p.y : 2*size2-p.y;
+        p.y  = p.y < 0 ? -p.y : 2*size-p.y;
         p.vy = -p.vy;
     }
 }
@@ -164,7 +163,7 @@ void save2( FILE *f, int n, my_particle_t *p )
     static bool first = true;
     if( first )
     {
-        fprintf( f, "%d %g\n", n, size2 );
+        fprintf( f, "%d %g\n", n, size );
         first = false;
     }
     for( int i = 0; i < n; i++ )
@@ -416,7 +415,7 @@ void exchange_moved(double size, imy_particle_t **local_particles_ptr,
 
     // Rebin all particles
     bins.clear();
-    init_bins(*n_local_particles, size2, *local_particles_ptr, bins);
+    init_bins(*n_local_particles, size, *local_particles_ptr, bins);
 }
 
 #define imy_particle_t_offset(attr) ((size_t)&(((imy_particle_t*)0)->attr))
@@ -518,8 +517,8 @@ int main(int argc, char **argv)
     FILE *fsum = sumname && rank == 0 ? fopen (sumname, "a") : NULL;
     // Initialize and bin particles
     imy_particle_t *particles = (imy_particle_t*) malloc(n * sizeof(imy_particle_t));
-    size2 = sqrt( density * n );
-    double size = sqrt(0.0005 * n);
+    //size = sqrt( density * n );
+    size = sqrt(density * n);
     bins_per_side = read_int2(argc, argv, "-b", max(1, sqrt(0.0005 * n) / (0.01 * 3)));
     D(printf("%d bins per side\n", bins_per_side));
     n_bins = bins_per_side * bins_per_side;
