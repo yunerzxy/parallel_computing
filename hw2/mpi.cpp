@@ -304,9 +304,10 @@ vector<int> get_rank_neighbors(int rank) {
 //     }
 // }
 void assign_particles_to_bins(int n, double canvas_side_len, imy_particle_t *particles, vector<bin_t> &bins) {
-    for (int i = 0; i < n; ++i) {
-        int b_idx = particles[i].particle.bin_idx = bin_of_particle(canvas_side_len, particles[i]);
-        bins[b_idx].particles.push_back(&particles[i]);
+    //for (int i = 0; i < n; ++i) {
+    for (auto &p : particles) {
+        int b_idx = p.particle.bin_idx = bin_of_particle(canvas_side_len, p);
+        bins[b_idx].particles.push_back(p);
     }
 }
 
