@@ -281,7 +281,7 @@ void exchange_neighbors(double canvas_side_len, imy_particle_t *local_particles,
         MPI_Request request;
         MPI_Ibsend(buf, n_b_particles, PARTICLE, nei_rank, 0, MPI_COMM_WORLD, &request);
         MPI_Status status;
-        MPI_Irecv(cur_pos, n, PARTICLE, nei_rank, 0, MPI_COMM_WORLD, &status);
+        MPI_Irecv(cur_pos, n, PARTICLE, nei_rank, 0, MPI_COMM_WORLD, &request);
         MPI_Get_count(&status, PARTICLE, &n_particles_received);
         assign_particles_to_bins(n_particles_received, canvas_side_len, cur_pos, bins);
         cur_pos += n_particles_received;
