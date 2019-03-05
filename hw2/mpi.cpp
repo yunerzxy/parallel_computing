@@ -271,26 +271,35 @@ std::vector<imy_particle_t> get_rank_border_particles(int nei_rank, std::vector<
 void exchange_neighbors(double canvas_side_len, imy_particle_t *local_particles,
                         int *n_local_particles, std::vector<bin_t> &bins){
 
+    // send border particles to neighbors
     std::vector<int> nei_ranks = get_rank_neighbors(rank);
+    imy_particle_t *cur_pos = local_particles + *n_local_particles;
+    int n_particles_received = 0;
     for(auto &nei_rank : nei_ranks){
         std::vector<imy_particle_t> border_particles = get_rank_border_particles(nei_rank, bins);
         int n_b_particles = border_particles.size();
         const void *buf = n_b_particles == 0 ? 0 : &border_particles[0];
         MPI_Request request;
         MPI_Ibsend(buf, n_b_particles, PARTICLE, nei_rank, 0, MPI_COMM_WORLD, &request);
-        MPI_Request_free(&request);
-    }
-
-    imy_particle_t *cur_pos = local_particles + *n_local_particles;
-    int n_particles_received = 0;
-    for (auto &nei_rank : nei_ranks){
         MPI_Status status;
         MPI_Recv(cur_pos, n, PARTICLE, nei_rank, 0, MPI_COMM_WORLD, &status);
         MPI_Get_count(&status, PARTICLE, &n_particles_received);
         assign_particles_to_bins(n_particles_received, canvas_side_len, cur_pos, bins);
         cur_pos += n_particles_received;
         *n_local_particles += n_particles_received;
+        MPI_Request_free(&request);
     }
+    // neighbors collect border particles and assign to bins
+    // imy_particle_t *cur_pos = local_particles + *n_local_particles;
+    // int n_particles_received = 0;
+    // for (auto &nei_rank : nei_ranks){
+    //     MPI_Status status;
+    //     MPI_Recv(cur_pos, n, PARTICLE, nei_rank, 0, MPI_COMM_WORLD, &status);
+    //     MPI_Get_count(&status, PARTICLE, &n_particles_received);
+    //     assign_particles_to_bins(n_particles_received, canvas_side_len, cur_pos, bins);
+    //     cur_pos += n_particles_received;
+    //     *n_local_particles += n_particles_received;
+    // }
 }
 
 void exchange_moved(double size, imy_particle_t **local_particles_ptr,
