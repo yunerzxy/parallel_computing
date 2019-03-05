@@ -278,7 +278,7 @@ void exchange_neighbors(double canvas_side_len, imy_particle_t *local_particles,
         MPI_Request request;
         if (n_b_particles == 0){
             std::cout << "no border particles for this nei" << std::endl;
-            MPI_Ibsend(0, border_particles.size(), PARTICLE, nei_rank, 0, MPI_COMM_WORLD, &request);
+            //MPI_Ibsend(0, border_particles.size(), PARTICLE, nei_rank, 0, MPI_COMM_WORLD, &request);
         } else {
             MPI_Ibsend(&border_particles[0], border_particles.size(), PARTICLE, nei_rank, 0, MPI_COMM_WORLD, &request);
         }
