@@ -1,5 +1,5 @@
 #
-# Edison - NERSC 
+# Edison - NERSC
 #
 # Intel Compilers are loaded by default; for other compilers please check the module list
 #
@@ -30,7 +30,7 @@ openmp.o: openmp.cpp common.h
 serial.o: serial.cpp common.h
 	$(CC) -c $(CFLAGS) serial.cpp
 mpi.o: mpi.cpp common.h
-	$(MPCC) -c $(CFLAGS) mpi.cpp
+	$(MPCC) -std=c++11 -c $(CFLAGS) mpi.cpp
 common.o: common.cpp common.h
 	$(CC) -c $(CFLAGS) common.cpp
 

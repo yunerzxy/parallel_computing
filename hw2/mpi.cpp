@@ -1,161 +1,98 @@
 #include <mpi.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include <assert.h>
 #include <list>
 #include <vector>
 #include <cmath>
-#include <time.h>
 #include <algorithm>
 #include <float.h>
+#include <time.h>
 #include <string.h>
 #include <math.h>
-#include <sys/time.h>
+#include "common.h"
 
-using namespace std;
-
-#ifdef DEBUG
-#define D(x) x
-#else
-#define D(x)
-#endif
-
-#ifndef __CS267_COMMON_H__
-#define __CS267_COMMON_H__
-
-inline int min( int a, int b ) { return a < b ? a : b; }
-inline int max( int a, int b ) { return a > b ? a : b; }
-
-//
-//  saving parameters
-//
-const int NSTEPS = 1000;
-const int SAVEFREQ = 10;
-
-typedef struct bin_t bin_t;
-
-//
-// particle data structure
-//
-typedef struct
-{
-  double x;
-  double y;
-  double vx;
-  double vy;
-  double ax;
-  double ay;
-  int bin_idx;
-} my_particle_t;
-
-//
-//  timing routines
-//
-double read_timer2( );
-
-//
-//  simulation routines
-//
-void apply_force2( my_particle_t &particle, my_particle_t &neighbor , double *dmin, double *davg, int *navg);
-void move2( my_particle_t &p );
-
-//
-//  I/O routines
-//
-FILE *open_save2( char *filename, int n );
-void save2( FILE *f, int n, my_particle_t *p );
-
-//
-//  argument processing routines
-//
-int find_option2( int argc, char **argv, const char *option );
-int read_int2( int argc, char **argv, const char *option, int default_value );
-char *read_string2( int argc, char **argv, const char *option, char *default_value );
-#endif
-
-//double size;
-double canvas_side_len;
-
-//  tuned constants
 #define density 0.0005
 #define mass    0.01
 #define cutoff  0.01
 #define min_r   (cutoff/100)
 #define dt      0.0005
-//  timer
-double read_timer2( )
-{
-    static bool initialized = false;
-    static struct timeval start;
-    struct timeval end;
-    if( !initialized )
+
+#define imy_particle_t_offset(attr) ((size_t)&(((imy_particle_t*)0)->attr))
+#define imy_particle_t_particle_offset(attr) ((size_t)&(((imy_particle_t*)0)->particle.attr))
+
+
+int bins_per_side, n_bins, n_proc, rank, n, rows_per_proc;
+double size2;
+
+MPI_Datatype PARTICLE;
+
+class my_particle_t{
+public:
+      double x, y, vx, vy, ax, ay;
+};
+
+
+class imy_particle_t{
+public:
+    my_particle_t particle;
+    int index;
+    int bin_idx;
+
+    void move()
     {
-        gettimeofday( &start, NULL );
-        initialized = true;
-    }
-    gettimeofday( &end, NULL );
-    return (end.tv_sec - start.tv_sec) + 1.0e-6 * (end.tv_usec - start.tv_usec);
-}
+        //  slightly simplified Velocity Verlet integration
+        //  conserves energy better than explicit Euler method
+        this->particle.vx += this->particle.ax * dt;
+        this->particle.vy += this->particle.ay * dt;
+        this->particle.x  += this->particle.vx * dt;
+        this->particle.y  += this->particle.vy * dt;
 
-//
-//  interact two particles
-//
-void apply_force2( my_particle_t &particle, my_particle_t &neighbor , double *dmin, double *davg, int *navg)
-{
-
-    double dx = neighbor.x - particle.x;
-    double dy = neighbor.y - particle.y;
-    double r2 = dx * dx + dy * dy;
-    if( r2 > cutoff*cutoff )
-        return;
-	if (r2 != 0)
+        //  bounce from walls
+        while(this->particle.x < 0 || this->particle.x > size2 )
         {
-	   if (r2/(cutoff*cutoff) < *dmin * (*dmin))
-	      *dmin = sqrt(r2)/cutoff;
-           (*davg) += sqrt(r2)/cutoff;
-           (*navg) ++;
+            this->particle.x  = this->particle.x < 0 ? -this->particle.x : 2 * size2- this->particle.x;
+            this->particle.vx = -this->particle.vx;
         }
-		
-    r2 = fmax( r2, min_r*min_r );
-    double r = sqrt( r2 );
- 
-    
-	
-    //
-    //  very simple short-range repulsive force
-    //
-    double coef = ( 1 - cutoff / r ) / r2 / mass;
-    particle.ax += coef * dx;
-    particle.ay += coef * dy;
-}
-
-//
-//  integrate the ODE
-//
-void move2( my_particle_t &p )
-{
-    //
-    //  slightly simplified Velocity Verlet integration
-    //  conserves energy better than explicit Euler method
-    //
-    p.vx += p.ax * dt;
-    p.vy += p.ay * dt;
-    p.x  += p.vx * dt;
-    p.y  += p.vy * dt;
-
-    //
-    //  bounce from walls
-    //
-    while( p.x < 0 || p.x > canvas_side_len )
-    {
-        p.x  = p.x < 0 ? -p.x : 2*canvas_side_len-p.x;
-        p.vx = -p.vx;
+        while( this->particle.y < 0 || this->particle.y > size2 )
+        {
+            this->particle.y  = this->particle.y < 0 ? -this->particle.y : 2*size2-this->particle.y;
+            this->particle.vy = -this->particle.vy;
+        }
     }
-    while( p.y < 0 || p.y > canvas_side_len )
+
+    void apply_force(my_particle_t &neighbor , double *dmin, double *davg, int *navg)
     {
-        p.y  = p.y < 0 ? -p.y : 2*canvas_side_len-p.y;
-        p.vy = -p.vy;
+        double dx = neighbor.x - this->particle.x;
+        double dy = neighbor.y - this->particle.y;
+        double r2 = dx * dx + dy * dy;
+        if(r2 > cutoff*cutoff)
+            return;
+          if (r2 != 0){
+              if (r2/(cutoff*cutoff) < *dmin * (*dmin))
+              *dmin = sqrt(r2)/cutoff;
+            (*davg) += sqrt(r2)/cutoff;
+            (*navg) ++;
+        }
+
+        r2 = fmax( r2, min_r*min_r );
+        double r = sqrt( r2 );
+
+        //  very simple short-range repulsive force
+        double coef = ( 1 - cutoff / r ) / r2 / mass;
+        this->particle.ax += coef * dx;
+        this->particle.ay += coef * dy;
     }
+};
+
+
+class bin_t{
+public:
+    std::list<imy_particle_t*> particles;
+    std::list<imy_particle_t*> incoming;
+};
+
+bool operator<(const imy_particle_t &a, const imy_particle_t &b) {
+    return a.index < b.index;
 }
 
 //
@@ -166,67 +103,42 @@ void save2( FILE *f, int n, my_particle_t *p )
     static bool first = true;
     if( first )
     {
-        fprintf( f, "%d %g\n", n, canvas_side_len );
+        fprintf( f, "%d %g\n", n, size2 );
         first = false;
     }
     for( int i = 0; i < n; i++ )
         fprintf( f, "%g %g\n", p[i].x, p[i].y );
 }
 
-//
-//  command line option processing
-//
-int find_option2( int argc, char **argv, const char *option )
+
+void apply_force2( my_particle_t &particle, my_particle_t &neighbor , double *dmin, double *davg, int *navg)
 {
-    for( int i = 1; i < argc; i++ )
-        if( strcmp( argv[i], option ) == 0 )
-            return i;
-    return -1;
+    double dx = neighbor.x - particle.x;
+    double dy = neighbor.y - particle.y;
+    double r2 = dx * dx + dy * dy;
+    if( r2 > cutoff*cutoff )
+        return;
+      if (r2 != 0){
+          if (r2/(cutoff*cutoff) < *dmin * (*dmin))
+          *dmin = sqrt(r2)/cutoff;
+           (*davg) += sqrt(r2)/cutoff;
+           (*navg) ++;
+    }
+
+    r2 = fmax( r2, min_r*min_r );
+    double r = sqrt( r2 );
+
+    //
+    //  very simple short-range repulsive force
+    //
+    double coef = ( 1 - cutoff / r ) / r2 / mass;
+    particle.ax += coef * dx;
+    particle.ay += coef * dy;
 }
 
-int read_int2( int argc, char **argv, const char *option, int default_value )
-{
-    int iplace = find_option2( argc, argv, option );
-    if( iplace >= 0 && iplace < argc-1 )
-        return atoi( argv[iplace+1] );
-    return default_value;
-}
-
-char *read_string2( int argc, char **argv, const char *option, char *default_value )
-{
-    int iplace = find_option2( argc, argv, option );
-    if( iplace >= 0 && iplace < argc-1 )
-        return argv[iplace+1];
-    return default_value;
-}
-
-int bins_per_side;
-int n_bins;
-int n_proc, rank;
-int n;
-int rows_per_proc;
-
-MPI_Datatype PARTICLE;
-
-// Indexed particle
-typedef struct {
-    my_particle_t particle;
-    int index;
-} imy_particle_t;
-
-bool operator<(const imy_particle_t &a, const imy_particle_t &b) {
-    return a.index < b.index;
-}
-
-struct bin_t {
-    std::list<imy_particle_t*> particles;
-    std::list<imy_particle_t*> incoming;
-};
-
-//int rank_of_bin(int b_idx);
-void init_bins(int n, double size, imy_particle_t *particles, std::vector<bin_t> &bins);
-
-void init_iparticles(int n, double size, imy_particle_t *p) {
+void init_particles_mpi(int rank, int n, double size, imy_particle_t *p) {
+    if(rank != 0)
+        return;
     srand48( time( NULL ) );
 
     int sx = (int)ceil(sqrt((double)n));
@@ -262,31 +174,13 @@ void init_iparticles(int n, double size, imy_particle_t *p) {
     free( shuffle );
 }
 
-//xiaoyun
-// int bin_of_particle(double size, imy_particle_t &particle) {
-//     double sidelength = size / bins_per_side;
-//     int b_row = (int)(particle.particle.x / sidelength);
-//     int b_col = (int)(particle.particle.y / sidelength);
-//     return b_row + b_col * bins_per_side;
-// }
 int bin_of_particle(double canvas_side_len, imy_particle_t &p) {
     double bin_side_len = canvas_side_len / bins_per_side;
     int row_b = floor(p.particle.x / bin_side_len), col_b = floor(p.particle.y / bin_side_len);
     return row_b + col_b * bins_per_side;
 }
 
-//xiaoyun
-// std::vector<int> neighbors_of_rank(int rank) {
-//     std::vector<int> neighbor_ranks;
-//     if (rank > 0) {
-//         neighbor_ranks.push_back(rank - 1);
-//     }
-//     if (rank < n_proc - 1) {
-//         neighbor_ranks.push_back(rank + 1);
-//     }
-//     return neighbor_ranks;
-// }
-vector<int> get_rank_neighbors(int rank) {
+std::vector<int> get_rank_neighbors(int rank) {
     std::vector<int> rank_neis;
     if (rank > 0)
         rank_neis.push_back(rank - 1);
@@ -295,246 +189,11 @@ vector<int> get_rank_neighbors(int rank) {
     return rank_neis;
 }
 
-//xiaoyun
-// void assign_particles_to_bins(int n, double size, imy_particle_t *particles, std::vector<bin_t> &bins) {
-//     // Put each particle in its bin
-//     for (int k = 0; k < n; k++) {
-//         int b_idx = particles[k].particle.bin_idx = bin_of_particle(size, particles[k]);
-//         bins[b_idx].particles.push_back(&particles[k]);
-//     }
-// }
-void assign_particles_to_bins(int n, double canvas_side_len, imy_particle_t *particles, vector<bin_t> &bins) {
+void assign_particles_to_bins(int n, double canvas_side_len, imy_particle_t *particles, std::vector<bin_t> &bins) {
     for (int i = 0; i < n; ++i) {
-        int b_idx = particles[i].particle.bin_idx = bin_of_particle(canvas_side_len, particles[i]);
+        int b_idx = particles[i].bin_idx = bin_of_particle(canvas_side_len, particles[i]);
         bins[b_idx].particles.push_back(&particles[i]);
     }
-}
-
-//xiaoyun
-// int rank_of_bin(int b_idx) {
-//     // 2D partitioning (still need to do)
-//     int b_row = b_idx % bins_per_side;
-//     return b_row / rows_per_proc;
-// }
-int get_bin_rank(int b_idx) {
-    int b_row = b_idx % bins_per_side;
-    return b_row / rows_per_proc;
-}
-
-//xiaoyun
-// std::vector<int> bins_of_rank(int rank) {
-//     std::vector<int> result;
-//     for (int row = rank * rows_per_proc;
-//          row < min((rank + 1) * rows_per_proc, bins_per_side); row++) {
-//         for (int col = 0; col < bins_per_side; col++) {
-//             result.push_back(row + col * bins_per_side);
-//         }
-//     }
-//     return result;
-// }
-vector<int> bins_of_rank(int rank) {
-    vector<int> res;
-    int row_s = rank * rows_per_proc, 
-        row_e = min(bins_per_side, rows_per_proc * (rank + 1));
-    for (int row = row_s; row < row_e; ++row)
-        for (int col = 0; col < bins_per_side; ++col)
-            res.push_back(row + col * bins_per_side);
-    return res;
-}
-
-//xiaoyun
-/** Returns the particles owned by the current rank in bins bordering on other_rank. */
-// std::vector<imy_particle_t> border_particles_of_rank(int other_rank, std::vector<bin_t> &bins) {
-//     int row;
-//     if (other_rank < rank) {
-//         row = rank * rows_per_proc; // first row of rank
-//     } else {
-//         row = (rank + 1) * rows_per_proc - 1; // last row of rank, possibly out of bounds
-//     }
-//     std::vector<imy_particle_t> result;
-//     if (row >= 0 && row < bins_per_side) {
-//         for (int col = 0; col < bins_per_side; col++) {
-//             bin_t &b = bins[row + col * bins_per_side];
-//             int n_particles = 0;
-//             for (std::list<imy_particle_t*>::const_iterator it = b.particles.begin();
-//                  it != b.particles.end(); it++) {
-//                 result.push_back(**it);
-//                 n_particles++;
-//             }
-//             assert(get_bin_rank(row + col * bins_per_side) == rank);
-//         }
-//     }
-//     return result;
-// }
-vector<imy_particle_t> get_rank_border_particles(int nei_rank, vector<bin_t> &bins) {
-    int row;
-    if (nei_rank < rank) row = rank * rows_per_proc;
-    else row = rows_per_proc * (rank + 1) - 1;
-    
-    vector<imy_particle_t> res;
-    if (row < 0 || row >= bins_per_side) return res;
-    for (int col = 0; col < bins_per_side; ++col) {
-        bin_t &b = bins[row + col * bins_per_side];
-        int n_particles = 0;
-        for (list<imy_particle_t*>::const_iterator it = b.particles.begin(); 
-            it != b.particles.end(); it++) {
-            res.push_back(**it);
-            n_particles++;
-        }
-        assert(get_bin_rank(row + col * bins_per_side) == rank);
-    }
-    return res;
-}
-
-
-void exchange_neighbors(double size, imy_particle_t *local_particles,
-                        int *n_local_particles, std::vector<bin_t> &bins) {
-    //std::vector<int> neighbor_ranks = neighbors_of_rank(rank);
-    vector<int> rank_neis = get_rank_neighbors(rank);
-    // Send border particles to neighbors
-    for (int i = 0; i < rank_neis.size(); ++i) {
-        vector<imy_particle_t> border_particles = get_rank_border_particles(rank_neis[i], bins);
-        D(printf("rank %d: exchange_neighbors: sending %lu border particles to rank %d\n", rank, border_particles.size(), rank_neis[i]));
-        MPI_Request request;
-        MPI_Ibsend(border_particles.empty() ? 0 : &border_particles[0], border_particles.size(), PARTICLE, rank_neis[i], 0, MPI_COMM_WORLD, &request);
-        MPI_Request_free(&request);
-    }
-    // Receive and bin neighbors' border particles
-    imy_particle_t *cur_pos = local_particles + *n_local_particles;
-    for (std::vector<int>::const_iterator it = rank_neis.begin();
-         it != rank_neis.end(); it++) {
-        MPI_Status status;
-        MPI_Recv(cur_pos, n, PARTICLE, *it, 0, MPI_COMM_WORLD, &status);
-        int num_particles_received;
-        MPI_Get_count(&status, PARTICLE, &num_particles_received);
-        assign_particles_to_bins(num_particles_received, size, cur_pos, bins);
-        cur_pos += num_particles_received;
-        assert(cur_pos <= local_particles + n);
-        *n_local_particles += num_particles_received;
-        D(printf("rank %d: exchange_neighbors: received %d border particles from rank %d\n", rank, num_particles_received, *it));
-    }
-}
-
-void exchange_moved(double size, imy_particle_t **local_particles_ptr,
-                    std::vector<bin_t> &bins, std::vector<int> &local_bin_idxs,
-                    int *n_local_particles) {
-    //std::vector<int> neighbor_ranks = neighbors_of_rank(rank);
-    vector<int> rank_neis = get_rank_neighbors(rank);
-    // Send moved particles to neighbors
-    // Do this scan when moving particles, populating a map from task to particle (still need to do)
-    // For each neighbor task
-    for (int i = 0; i < rank_neis.size(); i++) {
-        std::vector<imy_particle_t> moved_particles;
-        // For each bin owned by that task
-        for (int b_idx = 0; b_idx < n_bins; b_idx++) {
-            if (get_bin_rank(b_idx) == rank_neis[i]) {
-                // For each particle in that bin
-                for (std::list<imy_particle_t*>::const_iterator p_it = bins[b_idx].incoming.begin();
-                     p_it != bins[b_idx].incoming.end(); p_it++) {
-                    // Copy the particle into the moved_particles buffer
-                    moved_particles.push_back(**p_it);
-                }
-            }
-        }
-        // Send the particles to the task
-        D(printf("rank %d: exchange_moved: sending %lu particles to rank %d\n", rank, moved_particles.size(), rank_neis[i]));
-        MPI_Request request;
-        MPI_Ibsend(moved_particles.empty() ? 0 : &moved_particles[0], moved_particles.size(), PARTICLE, rank_neis[i], 0, MPI_COMM_WORLD, &request);
-        MPI_Request_free(&request);
-    }
-
-    // Receive particles moved here
-    imy_particle_t *new_local_particles = new imy_particle_t[n];
-    imy_particle_t *cur_pos = new_local_particles;
-    for (std::vector<int>::const_iterator it = rank_neis.begin();
-         it != rank_neis.end(); it++) {
-        MPI_Status status;
-        assert(cur_pos < new_local_particles + n);
-        MPI_Recv(cur_pos, n, PARTICLE, *it, 0, MPI_COMM_WORLD, &status);
-        int num_particles_received;
-        MPI_Get_count(&status, PARTICLE, &num_particles_received);
-        D(printf("rank %d: exchange_moved: received %d particles from rank %d\n", rank, num_particles_received, *it));
-        cur_pos += num_particles_received;
-        assert(cur_pos <= new_local_particles + n);
-    }
-
-    // Copy out remaining particles into new_local_particles
-    for (std::vector<int>::const_iterator b_it = local_bin_idxs.begin();
-         b_it != local_bin_idxs.end(); b_it++) {
-        for (std::list<imy_particle_t*>::const_iterator p_it = bins[*b_it].particles.begin();
-             p_it != bins[*b_it].particles.end(); p_it++) {
-            assert(cur_pos < new_local_particles + n);
-            *cur_pos = **p_it;
-            cur_pos++;
-        }
-    }
-
-    D(printf("rank %d: exchange_moved: num local particles %d -> %lu\n", rank, *n_local_particles, cur_pos - new_local_particles));
-
-    // Apply new_local_particles
-    delete[] *local_particles_ptr;
-    *local_particles_ptr = new_local_particles;
-    *n_local_particles = cur_pos - new_local_particles;
-
-    // Rebin all particles
-    bins.clear();
-    init_bins(*n_local_particles, size, *local_particles_ptr, bins);
-}
-
-#define imy_particle_t_offset(attr) ((size_t)&(((imy_particle_t*)0)->attr))
-#define imy_particle_t_particle_offset(attr) ((size_t)&(((imy_particle_t*)0)->particle.attr))
-
-void init_my_particle_type() {
-    int lens[5];
-    MPI_Aint disp[5];
-    MPI_Datatype typs[5];
-    MPI_Datatype temp;
-    lens[0] = 1; disp[0] = imy_particle_t_particle_offset(x); typs[0] = MPI_DOUBLE;
-    lens[1] = 1; disp[1] = imy_particle_t_particle_offset(y); typs[1] = MPI_DOUBLE;
-    lens[2] = 1; disp[2] = imy_particle_t_particle_offset(vx); typs[2] = MPI_DOUBLE;
-    lens[3] = 1; disp[3] = imy_particle_t_particle_offset(vy); typs[3] = MPI_DOUBLE;
-    lens[4] = 1; disp[4] = imy_particle_t_offset(index); typs[4] = MPI_INT;
-    MPI_Type_create_struct(5, lens, disp, typs, &temp);
-    MPI_Type_create_resized(temp, 0, sizeof(imy_particle_t), &PARTICLE);
-    MPI_Type_commit(&PARTICLE);
-}
-
-void scatter_particles(double size, imy_particle_t *particles, imy_particle_t *local_particles,
-                       int *n_local_particles) {
-    imy_particle_t *particles_by_bin = new imy_particle_t[n];
-    int *sendcnts = new int[n_proc];
-    int *displs = new int[n_proc];
-    if (rank == 0) {
-        int i = 0;
-        int cur_displs = 0;
-        for (int r = 0; r < n_proc; r++) {
-            int sendcnt = 0;
-            for (int k = 0; k < n; k++) {
-                particles[k].particle.bin_idx = bin_of_particle(size, particles[k]);
-                int rb = get_bin_rank(particles[k].particle.bin_idx);
-                assert(rb >= 0);
-                assert(rb < n_proc);
-                if (rb == r) {
-                    particles_by_bin[i] = particles[k];
-                    sendcnt++;
-                    i++;
-                }
-            }
-            sendcnts[r] = sendcnt;
-            displs[r] = cur_displs;
-            cur_displs += sendcnt;
-        }
-        assert(i == n);
-    }
-    MPI_Bcast(sendcnts, n_proc, MPI_INT, 0, MPI_COMM_WORLD);
-    *n_local_particles = sendcnts[rank];
-    D(printf("rank %d: scatter_particles: got %d local particles\n", rank, *n_local_particles));
-    MPI_Bcast(displs, n_proc, MPI_INT, 0, MPI_COMM_WORLD);
-    MPI_Scatterv(particles_by_bin, sendcnts, displs, PARTICLE,
-                 local_particles, *n_local_particles, PARTICLE, 0, MPI_COMM_WORLD);
-
-    delete[] sendcnts;
-    delete[] displs;
 }
 
 void init_bins(int n, double size, imy_particle_t *particles, std::vector<bin_t> &bins) {
@@ -546,6 +205,151 @@ void init_bins(int n, double size, imy_particle_t *particles, std::vector<bin_t>
     assign_particles_to_bins(n, size, particles, bins);
 }
 
+int rank_of_bin(int b_idx) {
+    int b_row = b_idx % bins_per_side;
+    return b_row / rows_per_proc;
+}
+
+
+std::vector<int> bins_of_rank(int rank) {
+    std::vector<int> res;
+    int row_s = rank * rows_per_proc,
+        row_e = min(bins_per_side, rows_per_proc * (rank + 1));
+    for (int row = row_s; row < row_e; ++row)
+        for (int col = 0; col < bins_per_side; ++col)
+            res.push_back(row + col * bins_per_side);
+    return res;
+}
+
+
+std::vector<imy_particle_t> get_rank_border_particles(int nei_rank, std::vector<bin_t> &bins) {
+    int row;
+    if (nei_rank < rank) row = rank * rows_per_proc;
+    else row = rows_per_proc * (rank + 1) - 1;
+
+    std::vector<imy_particle_t> res;
+    if (row < 0 || row >= bins_per_side) return res;
+    for (int col = 0; col < bins_per_side; ++col) {
+        bin_t &b = bins[row + col * bins_per_side];
+        int n_particles = 0;
+        for (std::list<imy_particle_t*>::const_iterator it = b.particles.begin();
+            it != b.particles.end(); it++) {
+            res.push_back(**it);
+            n_particles++;
+        }
+    }
+    return res;
+}
+
+void exchange_neighbors(double size, imy_particle_t *local_particles,
+                        int *n_local_particles, std::vector<bin_t> &bins){
+
+    std::vector<int> neighbor_ranks = get_rank_neighbors(rank);
+    for(int i = 0; i < neighbor_ranks.size(); ++i){
+        std::vector<imy_particle_t> border_particles = get_rank_border_particles(neighbor_ranks[i], bins);
+        MPI_Request request;
+        if(border_particles.empty()){
+            MPI_Ibsend(0, border_particles.size(), PARTICLE, neighbor_ranks[i], 0, MPI_COMM_WORLD, &request);
+        } else {
+            MPI_Ibsend(&border_particles[0], border_particles.size(), PARTICLE, neighbor_ranks[i], 0, MPI_COMM_WORLD, &request);
+        }
+        MPI_Request_free(&request);
+    }
+
+    imy_particle_t *cur_pos = local_particles + *n_local_particles;
+    int num_particles_received;
+    for (std::vector<int>::const_iterator it = neighbor_ranks.begin(); it != neighbor_ranks.end(); it++){
+        MPI_Status status;
+        MPI_Recv(cur_pos, n, PARTICLE, *it, 0, MPI_COMM_WORLD, &status);
+        MPI_Get_count(&status, PARTICLE, &num_particles_received);
+        assign_particles_to_bins(num_particles_received, size, cur_pos, bins);
+        cur_pos += num_particles_received;
+        *n_local_particles += num_particles_received;
+    }
+}
+
+void exchange_moved(double size, imy_particle_t **local_particles_ptr,
+                    std::vector<bin_t> &bins, std::vector<int> &local_bin_idxs,
+                    int *n_local_particles) {
+    std::vector<int> neighbor_ranks = get_rank_neighbors(rank);
+    for (int i = 0; i < neighbor_ranks.size(); i++) {
+        std::vector<imy_particle_t> moved_particles;
+        for (int b_idx = 0; b_idx < n_bins; b_idx++) {
+            if (rank_of_bin(b_idx) == neighbor_ranks[i]) {
+                for(auto &it: bins[b_idx].incoming){
+                    moved_particles.push_back(*it);
+                }
+            }
+        }
+        MPI_Request request;
+        if(moved_particles.empty()){
+            MPI_Ibsend(0, moved_particles.size(), PARTICLE, neighbor_ranks[i], 0, MPI_COMM_WORLD, &request);
+        } else {
+            MPI_Ibsend(&moved_particles[0], moved_particles.size(), PARTICLE, neighbor_ranks[i], 0, MPI_COMM_WORLD, &request);
+        }
+        MPI_Request_free(&request);
+    }
+
+    imy_particle_t *new_local_particles = new imy_particle_t[n];
+    imy_particle_t *cur_pos = new_local_particles;
+    //for (std::vector<int>::const_iterator it = neighbor_ranks.begin(); it != neighbor_ranks.end(); it++) {
+    for(auto &it: neighbor_ranks){
+        MPI_Status status;
+        MPI_Recv(cur_pos, n, PARTICLE, it, 0, MPI_COMM_WORLD, &status);
+        int num_particles_received;
+        MPI_Get_count(&status, PARTICLE, &num_particles_received);
+        cur_pos += num_particles_received;
+    }
+
+    // for (std::vector<int>::const_iterator b_it = local_bin_idxs.begin(); b_it != local_bin_idxs.end(); b_it++) {//
+    for(auto &b_it: local_bin_idxs){
+        for(auto &p_it: bins[b_it].particles){
+        //for (std::list<imy_particle_t*>::const_iterator p_it = bins[ *b_it].particles.begin(); p_it != bins[*b_it].particles.end(); p_it++) {
+            *cur_pos = *p_it;
+            cur_pos++;
+        }
+    }
+
+    // Apply new_local_particles
+    delete[] *local_particles_ptr;
+    *local_particles_ptr = new_local_particles;
+    *n_local_particles = cur_pos - new_local_particles;
+
+    // Rebin all particles
+    bins.clear();
+    init_bins(*n_local_particles, size2, *local_particles_ptr, bins);
+}
+
+void scatter_particles(double size, imy_particle_t *particles, imy_particle_t *local_particles,
+                       int *n_local_particles) {
+    int counter = 0;
+    int cur_displs = 0;
+    int sendcnt, r;
+    int sendcnts[n_proc];
+    int displs[n_proc];
+
+    imy_particle_t *particles_by_bin = new imy_particle_t[n];
+    for (r = 0; r < n_proc && rank == 0; ++r) {
+        sendcnt = 0;
+        for (int k = 0; k < n; k++) {
+            particles[k].bin_idx = bin_of_particle(size, particles[k]);
+            int rb = rank_of_bin(particles[k].bin_idx);
+            if (rb != r)      continue;
+            particles_by_bin[counter] = particles[k];
+            sendcnt++;
+            counter++;
+        }
+        sendcnts[r] = sendcnt;
+        displs[r] = cur_displs;
+        cur_displs += sendcnts[r];
+    }
+
+    MPI_Bcast(&sendcnts[0], n_proc, MPI_INT, 0, MPI_COMM_WORLD);
+    *n_local_particles = sendcnts[rank];
+    MPI_Bcast(&displs[0], n_proc, MPI_INT, 0, MPI_COMM_WORLD);
+    MPI_Scatterv(particles_by_bin, &sendcnts[0], &displs[0], PARTICLE, local_particles, *n_local_particles, PARTICLE, 0, MPI_COMM_WORLD);
+}
+
 int main(int argc, char **argv)
 {
     int navg, nabsavg=0;
@@ -554,7 +358,7 @@ int main(int argc, char **argv)
     int rnavg;
 
     // Process command line parameters
-    if (find_option2(argc, argv, "-h") >= 0)
+    if (find_option(argc, argv, "-h") >= 0)
     {
         printf("Options:\n");
         printf("-h to see this help\n");
@@ -565,45 +369,92 @@ int main(int argc, char **argv)
         return 0;
     }
 
-    n = read_int2(argc, argv, "-n", 1000);
-    char *savename = read_string2(argc, argv, "-o", NULL);
-    char *sumname = read_string2(argc, argv, "-s", NULL);
+    n = read_int(argc, argv, "-n", 1000);
+    char *savename = read_string(argc, argv, "-o", NULL);
+    char *sumname = read_string(argc, argv, "-s", NULL);
 
     // Set up MPI
     MPI_Init(&argc, &argv);
     MPI_Comm_size(MPI_COMM_WORLD, &n_proc);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-    imy_particle_t *mpi_buffer = new imy_particle_t[3 * n];
-    MPI_Buffer_attach(mpi_buffer, 10 * n * sizeof(imy_particle_t));
+
     // Allocate generic resources
     FILE *fsave = savename && rank == 0 ? fopen(savename, "w") : NULL;
     FILE *fsum = sumname && rank == 0 ? fopen (sumname, "a") : NULL;
-    // Initialize and bin particles
+
+    // receieve & send buffer
+    imy_particle_t *mpi_buffer = new imy_particle_t[3 * n];
+    MPI_Buffer_attach(mpi_buffer, 10 * n * sizeof(imy_particle_t));
+
+    // particle initialization
     imy_particle_t *particles = (imy_particle_t*) malloc(n * sizeof(imy_particle_t));
-    //size = sqrt( density * n );
-    canvas_side_len = sqrt(density * n);
-    bins_per_side = read_int2(argc, argv, "-b", max(1, sqrt(0.0005 * n) / (0.01 * 3)));
-    D(printf("%d bins per side\n", bins_per_side));
-    n_bins = bins_per_side * bins_per_side;
-    rows_per_proc = ceil(bins_per_side / (float)n_proc);
-    D(printf("%d rows per proc\n", rows_per_proc));
-    if (rank == 0) {
-        init_iparticles(n, canvas_side_len, particles);
-    }
     // Allocate local particle buffer
     imy_particle_t *local_particles = (imy_particle_t*) malloc(n * sizeof(imy_particle_t));
-    int n_local_particles;
-    init_my_particle_type();
-    // Populate local particle buffers
-    scatter_particles(canvas_side_len, particles, local_particles, &n_local_particles);
+
+    size2 = sqrt(density * n);
+    double size = sqrt(density * n);
+
+    bins_per_side = max(1, sqrt(density * n) / (0.01 * 3));
+    n_bins = bins_per_side * bins_per_side;
+    rows_per_proc = ceil(bins_per_side / (float)n_proc);
+
+    init_particles_mpi(rank, n, size, particles);
+
+    // initialize MPI PARTICLE
+    int n_local_particles, particle_size;
+    int counter, cur_displs, counter_send;
+    int lens[5];
+    int counter_sends[n_proc];
+    int displs[n_proc];
+
+    MPI_Aint disp[5];
+    MPI_Datatype temp;
+    MPI_Datatype types[5];
+
+    particle_size = sizeof(imy_particle_t);
+    std::fill_n(lens, 5, 1);
+    std::fill_n(types, 4, MPI_DOUBLE);
+    types[4] = MPI_INT;
+    disp[0] = imy_particle_t_particle_offset(x);
+    disp[1] = imy_particle_t_particle_offset(y);
+    disp[2] = imy_particle_t_particle_offset(vx);
+    disp[3] = imy_particle_t_particle_offset(vy);
+    disp[4] = imy_particle_t_offset(index);
+
+    MPI_Type_create_struct(5, lens, disp, types, &temp);
+    MPI_Type_create_resized(temp, 0, particle_size, &PARTICLE);
+    MPI_Type_commit(&PARTICLE);
+
+    //scatter the paritcles to each processors
+
+    imy_particle_t *particles_by_bin = new imy_particle_t[n];
+    for (int pro = cur_displs = counter = 0; pro < n_proc && rank == 0; cur_displs += counter_sends[pro], ++pro) {
+        counter_send = 0;
+        for (int i = 0; i < n; ++i) {
+            if (rank_of_bin(bin_of_particle(size, particles[i])) != pro)      continue;
+            particles_by_bin[counter] = particles[i];
+            counter_send++;
+            counter++;
+        }
+        counter_sends[pro] = counter_send;
+        displs[pro] = cur_displs;
+    }
+
+
+    MPI_Bcast(&counter_sends[0], n_proc, MPI_INT, 0, MPI_COMM_WORLD);
+    n_local_particles = counter_sends[rank];
+    MPI_Bcast(&displs[0], n_proc, MPI_INT, 0, MPI_COMM_WORLD);
+    MPI_Scatterv(particles_by_bin, &counter_sends[0], &displs[0], PARTICLE, local_particles, n_local_particles, PARTICLE, 0, MPI_COMM_WORLD);
+
     // Initialize local bins
     std::vector<bin_t> bins;
     std::vector<int> local_bin_idxs = bins_of_rank(rank);
-    init_bins(n_local_particles, canvas_side_len, local_particles, bins);
+    init_bins(n_local_particles, size, local_particles, bins);
+
     //
     //  simulate a number of time steps
     //
-    double simulation_time = read_timer2();
+    double simulation_time = read_timer();
     for (int step = 0; step < NSTEPS; step++)
     {
         navg = 0;
@@ -611,10 +462,10 @@ int main(int argc, char **argv)
         davg = 0.0;
 
         // Populate bins with neighboring bins
-        exchange_neighbors(canvas_side_len, local_particles, &n_local_particles, bins);
+        exchange_neighbors(size, local_particles, &n_local_particles, bins);
 
         // Zero out the accelerations
-        for (int i = 0; i < n_local_particles; i++) {
+        for (int i = 0; i < n_local_particles; ++i) {
             local_particles[i].particle.ax = local_particles[i].particle.ay = 0;
         }
 
@@ -631,21 +482,18 @@ int main(int argc, char **argv)
                      b2_col <= min(bins_per_side - 1, b1_col + 1);
                      b2_col++) {
                     int b2 = b2_row + b2_col * bins_per_side;
-                    assert(b1 >= 0);
-                    assert(b1 < n_bins);
-                    assert(bins[b1].particles.size() <= n);
                     for (std::list<imy_particle_t*>::const_iterator it1 = bins[b1].particles.begin();
                          it1 != bins[b1].particles.end(); it1++) {
                         for (std::list<imy_particle_t*>::const_iterator it2 = bins[b2].particles.begin();
                              it2 != bins[b2].particles.end(); it2++) {
-                            apply_force2((*it1)->particle, (*it2)->particle, &dmin, &davg, &navg);
+                             (*it1)->apply_force((*it2)->particle, &dmin, &davg, &navg);
                         }
                     }
                 }
             }
         }
 
-        if (find_option2(argc, argv, "-no") == -1) {
+        if (find_option(argc, argv, "-no") == -1) {
             MPI_Reduce(&davg,&rdavg,1,MPI_DOUBLE,MPI_SUM,0,MPI_COMM_WORLD);
             MPI_Reduce(&navg,&rnavg,1,MPI_INT,MPI_SUM,0,MPI_COMM_WORLD);
             MPI_Reduce(&dmin,&rdmin,1,MPI_DOUBLE,MPI_MIN,0,MPI_COMM_WORLD);
@@ -662,20 +510,18 @@ int main(int argc, char **argv)
             }
         }
 
-        //
         //  move particles
-        //
         for (std::vector<int>::const_iterator b_it = local_bin_idxs.begin();
              b_it != local_bin_idxs.end(); b_it++) {
             int b = *b_it;
             std::list<imy_particle_t*>::iterator it = bins[b].particles.begin();
             while (it != bins[b].particles.end()) {
                 imy_particle_t *p = *it;
-                move2(p->particle);
-                int new_b_idx = bin_of_particle(canvas_side_len, *p);
+                p->move();
+                int new_b_idx = bin_of_particle(size, *p);
                 if (new_b_idx != b) {
                     bin_t *new_bin = &bins[new_b_idx];
-                    p->particle.bin_idx = new_b_idx;
+                    p->bin_idx = new_b_idx;
                     bins[b].particles.erase(it++);
                     new_bin->incoming.push_back(p);
                 } else {
@@ -691,14 +537,13 @@ int main(int argc, char **argv)
             bins[b].incoming.clear();
         }
 
-        exchange_moved(canvas_side_len, &local_particles, bins, local_bin_idxs, &n_local_particles);
+        exchange_moved(size, &local_particles, bins, local_bin_idxs, &n_local_particles);
 
         //
         //  save current step if necessary
         //
-        if (find_option2(argc, argv, "-no") == -1) {
+        if (find_option(argc, argv, "-no") == -1) {
             if (savename && (step % SAVEFREQ) == 0) {
-                D(printf("rank %d: Gathering particle counts...\n", rank));
                 int *local_particle_counts = 0;
                 if (rank == 0) {
                     local_particle_counts = new int[n_proc];
@@ -731,12 +576,12 @@ int main(int argc, char **argv)
             }
         }
     }
-    simulation_time = read_timer2() - simulation_time;
+    simulation_time = read_timer() - simulation_time;
 
     if (rank == 0) {
         printf("n = %d, simulation time = %g seconds", n, simulation_time);
 
-        if (find_option2(argc, argv, "-no") == -1) {
+        if (find_option(argc, argv, "-no") == -1) {
             if (nabsavg) absavg /= nabsavg;
             //
             //  -the minimum distance absmin between 2 particles during the run of the simulation
