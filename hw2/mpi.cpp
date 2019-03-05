@@ -286,7 +286,7 @@ void exchange_neighbors(double canvas_side_len, imy_particle_t *local_particles,
 
     imy_particle_t *cur_pos = local_particles + *n_local_particles;
     int num_particles_received;
-    for (std::vector<int>::const_iterator it = neighbor_ranks.begin(); it != neighbor_ranks.end(); it++){
+    for (std::vector<int>::const_iterator it = nei_ranks.begin(); it != nei_ranks.end(); it++){
         MPI_Status status;
         MPI_Recv(cur_pos, n, PARTICLE, *it, 0, MPI_COMM_WORLD, &status);
         MPI_Get_count(&status, PARTICLE, &num_particles_received);
