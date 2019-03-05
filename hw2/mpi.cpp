@@ -274,7 +274,8 @@ void exchange_neighbors(double canvas_side_len, imy_particle_t *local_particles,
     std::vector<int> nei_ranks = get_rank_neighbors(rank);
     for(auto &nei_rank : nei_ranks){
         std::vector<imy_particle_t> border_particles = get_rank_border_particles(nei_rank, bins);
-        const void *buf = border_particles.size() == 0 ? 0 : &border_particles[0];
+        int n_b_particles = border_particles.size();
+        const void *buf = n_b_particles == 0 ? 0 : &border_particles[0];
         MPI_Request request;
         MPI_Ibsend(buf, n_b_particles, PARTICLE, nei_rank, 0, MPI_COMM_WORLD, &request);
         MPI_Request_free(&request);
