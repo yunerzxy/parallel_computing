@@ -241,17 +241,45 @@ std::vector<imy_particle_t> get_rank_border_particles(int nei_rank, std::vector<
     return res;
 }
 
-void exchange_neighbors(double size, imy_particle_t *local_particles,
+// void exchange_neighbors(double size, imy_particle_t *local_particles,
+//                         int *n_local_particles, std::vector<bin_t> &bins){
+
+//     std::vector<int> neighbor_ranks = get_rank_neighbors(rank);
+//     for(int i = 0; i < neighbor_ranks.size(); ++i){
+//         std::vector<imy_particle_t> border_particles = get_rank_border_particles(neighbor_ranks[i], bins);
+//         MPI_Request request;
+//         if(border_particles.empty()){
+//             MPI_Ibsend(0, border_particles.size(), PARTICLE, neighbor_ranks[i], 0, MPI_COMM_WORLD, &request);
+//         } else {
+//             MPI_Ibsend(&border_particles[0], border_particles.size(), PARTICLE, neighbor_ranks[i], 0, MPI_COMM_WORLD, &request);
+//         }
+//         MPI_Request_free(&request);
+//     }
+
+//     imy_particle_t *cur_pos = local_particles + *n_local_particles;
+//     int num_particles_received;
+//     for (std::vector<int>::const_iterator it = neighbor_ranks.begin(); it != neighbor_ranks.end(); it++){
+//         MPI_Status status;
+//         MPI_Recv(cur_pos, n, PARTICLE, *it, 0, MPI_COMM_WORLD, &status);
+//         MPI_Get_count(&status, PARTICLE, &num_particles_received);
+//         assign_particles_to_bins(num_particles_received, size, cur_pos, bins);
+//         cur_pos += num_particles_received;
+//         *n_local_particles += num_particles_received;
+//     }
+// }
+void exchange_neighbors(double canvas_side_len, imy_particle_t *local_particles,
                         int *n_local_particles, std::vector<bin_t> &bins){
 
-    std::vector<int> neighbor_ranks = get_rank_neighbors(rank);
-    for(int i = 0; i < neighbor_ranks.size(); ++i){
-        std::vector<imy_particle_t> border_particles = get_rank_border_particles(neighbor_ranks[i], bins);
+    std::vector<int> nei_ranks = get_rank_neighbors(rank);
+    for(auto &nei_rank : nei_ranks){
+        std::vector<imy_particle_t> border_particles = get_rank_border_particles(nei_rank, bins);
+        int n_b_particles = border_particles.size();
         MPI_Request request;
-        if(border_particles.empty()){
-            MPI_Ibsend(0, border_particles.size(), PARTICLE, neighbor_ranks[i], 0, MPI_COMM_WORLD, &request);
+        if (n_b_particles == 0){
+            std::cout << "no border particles for this nei" << std::endl;
+            MPI_Ibsend(0, border_particles.size(), PARTICLE, nei_rank, 0, MPI_COMM_WORLD, &request);
         } else {
-            MPI_Ibsend(&border_particles[0], border_particles.size(), PARTICLE, neighbor_ranks[i], 0, MPI_COMM_WORLD, &request);
+            MPI_Ibsend(&border_particles[0], border_particles.size(), PARTICLE, nei_rank, 0, MPI_COMM_WORLD, &request);
         }
         MPI_Request_free(&request);
     }
@@ -262,7 +290,7 @@ void exchange_neighbors(double size, imy_particle_t *local_particles,
         MPI_Status status;
         MPI_Recv(cur_pos, n, PARTICLE, *it, 0, MPI_COMM_WORLD, &status);
         MPI_Get_count(&status, PARTICLE, &num_particles_received);
-        assign_particles_to_bins(num_particles_received, size, cur_pos, bins);
+        assign_particles_to_bins(num_particles_received, canvas_side_len, cur_pos, bins);
         cur_pos += num_particles_received;
         *n_local_particles += num_particles_received;
     }
