@@ -10,6 +10,7 @@
 #include <string.h>
 #include <math.h>
 #include "common.h"
+#include <iostream>
 
 #define density 0.0005
 #define mass    0.01
