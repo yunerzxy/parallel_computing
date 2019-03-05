@@ -273,7 +273,7 @@ void exchange_neighbors(double canvas_side_len, imy_particle_t *local_particles,
 
     std::vector<int> nei_ranks = get_rank_neighbors(rank);
     imy_particle_t *cur_pos = local_particles + *n_local_particles;
-    int n_particles_received = 0;
+    //int n_particles_received = 0;
     for(auto &nei_rank : nei_ranks){
         std::vector<imy_particle_t> border_particles = get_rank_border_particles(nei_rank, bins);
         int n_b_particles = border_particles.size();
@@ -282,10 +282,10 @@ void exchange_neighbors(double canvas_side_len, imy_particle_t *local_particles,
         MPI_Ibsend(buf, n_b_particles, PARTICLE, nei_rank, 0, MPI_COMM_WORLD, &request);
         MPI_Status status;
         MPI_Irecv(cur_pos, n, PARTICLE, nei_rank, 0, MPI_COMM_WORLD, &request);
-        MPI_Get_count(&status, PARTICLE, &n_particles_received);
-        assign_particles_to_bins(n_particles_received, canvas_side_len, cur_pos, bins);
-        cur_pos += n_particles_received;
-        *n_local_particles += n_particles_received;
+        //MPI_Get_count(&status, PARTICLE, &n_particles_received);
+        assign_particles_to_bins(n_b_particles, canvas_side_len, cur_pos, bins);
+        cur_pos += n_b_particles;
+        *n_local_particles += n_b_particles;
         MPI_Request_free(&request);
     }
 }
