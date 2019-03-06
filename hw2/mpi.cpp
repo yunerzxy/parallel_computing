@@ -301,16 +301,15 @@ void exchange_moved(double size, imy_particle_t **local_particles_ptr,
     for (auto &nei_rank : neighbor_ranks) {
         // get all bins in this nei_rank
         std::vector<int> cur_bins = bins_of_rank(nei_rank);
-        std::vector<imy_particle_t> moved_particles;
+        //std::vector<imy_particle_t> moved_particles;
+        std::list<imy_particle_t*> moved_particles;
         for (auto b_idx : cur_bins) {
-            //if (rank_of_bin(b_idx) == neighbor_ranks[i]) {
-                for(auto &it: bins[b_idx].incoming){
-                    moved_particles.push_back(*it);
-                }
-            //}
+            //for(auto &p: bins[b_idx].incoming)
+                //moved_particles.push_back(*p);
+            moved_particles.merge(bins[b_idx].incoming);
         }
         int n_moved_p = moved_particles.size();
-        const void *buf = n_moved_p == 0 ? 0 : &moved_particles[0];
+        const void *buf = n_moved_p == 0 ? 0 : &*moved_particles[0];
         MPI_Request request;
         MPI_Ibsend(buf, n_moved_p, PARTICLE, nei_rank, 0, MPI_COMM_WORLD, &request);
         MPI_Request_free(&request);
