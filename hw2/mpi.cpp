@@ -309,12 +309,10 @@ void exchange_moved(double size, imy_particle_t **local_particles_ptr,
                 }
             //}
         }
+        int n_moved_p = moved_particles.size();
+        const void *buf = n_moved_p == 0 ? 0 : &moved_particles[0];
         MPI_Request request;
-        if(moved_particles.empty()){
-            MPI_Ibsend(0, moved_particles.size(), PARTICLE, neighbor_ranks[i], 0, MPI_COMM_WORLD, &request);
-        } else {
-            MPI_Ibsend(&moved_particles[0], moved_particles.size(), PARTICLE, neighbor_ranks[i], 0, MPI_COMM_WORLD, &request);
-        }
+        MPI_Ibsend(buf, n_moved_p, PARTICLE, nei_rank, 0, MPI_COMM_WORLD, &request);
         MPI_Request_free(&request);
     }
 
