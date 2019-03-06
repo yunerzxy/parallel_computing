@@ -603,10 +603,10 @@ int main(int argc, char **argv)
         // Apply new_local_particles
         //delete[] *local_particles_ptr;
         //local_particles_ptr = new_local_particles;
-        n_local_particles = tmp_pos - new_local_particles;
+        &n_local_particles = tmp_pos - &new_local_particles;
         // Rebin all particles
         bins.clear();
-        init_bins(n_local_particles, size, new_local_particles, bins);
+        init_bins(&n_local_particles, size, &new_local_particles, bins);
 
         //
         //  save current step if necessary
