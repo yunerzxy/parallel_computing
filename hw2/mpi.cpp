@@ -586,24 +586,24 @@ int main(int argc, char **argv)
             MPI_Request_free(&request);
         }
         imy_particle_t *new_local_particles = new imy_particle_t[n];
-        imy_particle_t *cur_pos = new_local_particles;
+        imy_particle_t *tmp_pos = new_local_particles;
         for(auto &nei_rank : neighbor_ranks){
             MPI_Status status;
-            MPI_Recv(cur_pos, n, PARTICLE, nei_rank, 0, MPI_COMM_WORLD, &status);
+            MPI_Recv(tmp_pos, n, PARTICLE, nei_rank, 0, MPI_COMM_WORLD, &status);
             int n_particles_received;
             MPI_Get_count(&status, PARTICLE, &n_particles_received);
-            cur_pos += n_particles_received;
+            tmp_pos += n_particles_received;
         }
         for(auto &b_idx : local_bin_idxs){
             for(auto &p : bins[b_idx].particles){
-                *cur_pos = *p;
-                cur_pos++;
+                *tmp_pos = *p;
+                tmp_pos++;
             }
         }
         // Apply new_local_particles
         //delete[] *local_particles_ptr;
         //local_particles_ptr = new_local_particles;
-        n_local_particles = cur_pos - new_local_particles;
+        n_local_particles = tmp_pos - new_local_particles;
         // Rebin all particles
         bins.clear();
         init_bins(n_local_particles, size, new_local_particles, bins);
