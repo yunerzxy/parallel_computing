@@ -606,7 +606,7 @@ int main(int argc, char **argv)
         n_local_particles = tmp_pos - new_local_particles;
         // Rebin all particles
         bins.clear();
-        init_bins(n_local_particles, size, *new_local_particles, bins);
+        init_bins(n_local_particles, size, new_local_particles, bins);
 
         //
         //  save current step if necessary
