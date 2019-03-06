@@ -301,15 +301,12 @@ void exchange_moved(double size, imy_particle_t **local_particles_ptr,
     for (auto &nei_rank : neighbor_ranks) {
         // get all bins in this nei_rank
         std::vector<int> cur_bins = bins_of_rank(nei_rank);
-        //std::vector<imy_particle_t> moved_particles;
-        std::list<imy_particle_t*> moved_particles;
-        for (auto b_idx : cur_bins) {
-            //for(auto &p: bins[b_idx].incoming)
-                //moved_particles.push_back(*p);
-            moved_particles.merge(bins[b_idx].incoming);
-        }
+        std::vector<imy_particle_t> moved_particles;
+        for (auto b_idx : cur_bins)
+            for(auto &p: bins[b_idx].incoming)
+                moved_particles.push_back(*p);
         int n_moved_p = moved_particles.size();
-        const void *buf = n_moved_p == 0 ? 0 : &moved_particles;
+        const void *buf = n_moved_p == 0 ? 0 : &moved_particles[0];
         MPI_Request request;
         MPI_Ibsend(buf, n_moved_p, PARTICLE, nei_rank, 0, MPI_COMM_WORLD, &request);
         MPI_Request_free(&request);
@@ -317,20 +314,16 @@ void exchange_moved(double size, imy_particle_t **local_particles_ptr,
 
     imy_particle_t *new_local_particles = new imy_particle_t[n];
     imy_particle_t *cur_pos = new_local_particles;
-    //for (std::vector<int>::const_iterator it = neighbor_ranks.begin(); it != neighbor_ranks.end(); it++) {
-    for(auto &it: neighbor_ranks){
+    for(auto &nei_rank : neighbor_ranks){
         MPI_Status status;
-        MPI_Recv(cur_pos, n, PARTICLE, it, 0, MPI_COMM_WORLD, &status);
+        MPI_Recv(cur_pos, n, PARTICLE, nei_rank, 0, MPI_COMM_WORLD, &status);
         int num_particles_received;
         MPI_Get_count(&status, PARTICLE, &num_particles_received);
         cur_pos += num_particles_received;
     }
-
-    // for (std::vector<int>::const_iterator b_it = local_bin_idxs.begin(); b_it != local_bin_idxs.end(); b_it++) {//
-    for(auto &b_it: local_bin_idxs){
-        for(auto &p_it: bins[b_it].particles){
-        //for (std::list<imy_particle_t*>::const_iterator p_it = bins[ *b_it].particles.begin(); p_it != bins[*b_it].particles.end(); p_it++) {
-            *cur_pos = *p_it;
+    for(auto &b_idx : local_bin_idxs){
+        for(auto &p : bins[b_idx].particles){
+            *cur_pos = *p;
             cur_pos++;
         }
     }
