@@ -294,6 +294,57 @@ void exchange_neighbors(double canvas_side_len, imy_particle_t *local_particles,
     }
 }
 
+// void exchange_moved(double size, imy_particle_t **local_particles_ptr,
+//                     std::vector<bin_t> &bins, std::vector<int> &local_bin_idxs,
+//                     int *n_local_particles) {
+//     std::vector<int> neighbor_ranks = get_rank_neighbors(rank);
+//     for (int i = 0; i < neighbor_ranks.size(); i++) {
+//         std::vector<imy_particle_t> moved_particles;
+//         for (int b_idx = 0; b_idx < n_bins; b_idx++) {
+//             if (rank_of_bin(b_idx) == neighbor_ranks[i]) {
+//                 for(auto &it: bins[b_idx].incoming){
+//                     moved_particles.push_back(*it);
+//                 }
+//             }
+//         }
+//         MPI_Request request;
+//         if(moved_particles.empty()){
+//             MPI_Ibsend(0, moved_particles.size(), PARTICLE, neighbor_ranks[i], 0, MPI_COMM_WORLD, &request);
+//         } else {
+//             MPI_Ibsend(&moved_particles[0], moved_particles.size(), PARTICLE, neighbor_ranks[i], 0, MPI_COMM_WORLD, &request);
+//         }
+//         MPI_Request_free(&request);
+//     }
+
+//     imy_particle_t *new_local_particles = new imy_particle_t[n];
+//     imy_particle_t *cur_pos = new_local_particles;
+//     //for (std::vector<int>::const_iterator it = neighbor_ranks.begin(); it != neighbor_ranks.end(); it++) {
+//     for(auto &it: neighbor_ranks){
+//         MPI_Status status;
+//         MPI_Recv(cur_pos, n, PARTICLE, it, 0, MPI_COMM_WORLD, &status);
+//         int num_particles_received;
+//         MPI_Get_count(&status, PARTICLE, &num_particles_received);
+//         cur_pos += num_particles_received;
+//     }
+
+//     // for (std::vector<int>::const_iterator b_it = local_bin_idxs.begin(); b_it != local_bin_idxs.end(); b_it++) {//
+//     for(auto &b_it: local_bin_idxs){
+//         for(auto &p_it: bins[b_it].particles){
+//         //for (std::list<imy_particle_t*>::const_iterator p_it = bins[ *b_it].particles.begin(); p_it != bins[*b_it].particles.end(); p_it++) {
+//             *cur_pos = *p_it;
+//             cur_pos++;
+//         }
+//     }
+
+//     // Apply new_local_particles
+//     delete[] *local_particles_ptr;
+//     *local_particles_ptr = new_local_particles;
+//     *n_local_particles = cur_pos - new_local_particles;
+
+//     // Rebin all particles
+//     bins.clear();
+//     init_bins(*n_local_particles, size2, *local_particles_ptr, bins);
+// }
 void exchange_moved(double size, imy_particle_t **local_particles_ptr,
                     std::vector<bin_t> &bins, std::vector<int> &local_bin_idxs,
                     int *n_local_particles) {
@@ -345,7 +396,6 @@ void exchange_moved(double size, imy_particle_t **local_particles_ptr,
     bins.clear();
     init_bins(*n_local_particles, size2, *local_particles_ptr, bins);
 }
-
 
 void scatter_particles(double size, imy_particle_t *particles, imy_particle_t *local_particles,
                        int *n_local_particles) {
