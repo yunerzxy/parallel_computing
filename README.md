@@ -1,6 +1,6 @@
 # Parallel Computing - HPC, Frameworks, ALgorithms, and Techniques
 
-#What's NERSC</br>
+What's NERSC</br>
 National Energy Research Scientific Computing Center,(part of Lawrence Berkeley National Laboratory in Berkeley, CA) a high performance scientific computing center. NERSC provides High Performance Computing and Storage facilities and has about 6,000 active user accounts from across the U.S. and internationally. 
 
 Major Computing Resources</br>
@@ -14,10 +14,10 @@ Use different approaches to optimize single-thread matrix multiplication. Method
 2. Mass Particles Simulations
 This project simulate the repulsion among mass particles based on a slightly simplified Velocity Verlet integration, which conserves energy better than explicit Euler method. Implemented 3 different approaches to parallel the simulation.
 
-2.1 Serial Implementation and OpenMP
+3. Serial Implementation and OpenMP
 Implemented serial code to reduce runtime from O(n^2) to O(n)
 Implemented multi-threaded shared-memory OpenMP model to further optimize runtime to O(n/p), where p is the number of threads
 
-2.2 MPI
+4. MPI
 Implemented MPI, the multiprocessing model with distributed memory based on serial binning teniques
 Achieved O(n) runtime and O(n/p) with scaling, where p is the number of processors.
