@@ -585,8 +585,8 @@ int main(int argc, char **argv)
             MPI_Ibsend(buf, n_moved_p, PARTICLE, nei_rank, 0, MPI_COMM_WORLD, &request);
             MPI_Request_free(&request);
         }
-        //imy_particle_t *new_local_particles = new imy_particle_t[n];
-        imy_particle_t *tmp_pos = local_particles;
+        imy_particle_t *new_local_particles = new imy_particle_t[n];
+        imy_particle_t *tmp_pos = new_local_particles;
         for(auto &nei_rank : neighbor_ranks){
             MPI_Status status;
             MPI_Recv(tmp_pos, n, PARTICLE, nei_rank, 0, MPI_COMM_WORLD, &status);
@@ -601,11 +601,11 @@ int main(int argc, char **argv)
             }
         }
         // Apply new_local_particles
-        //local_particles = new_local_particles;
-        n_local_particles = tmp_pos - local_particles;
+        local_particles = new_local_particles;
+        n_local_particles = tmp_pos - new_local_particles;
         // Rebin all particles
         bins.clear();
-        init_bins(n_local_particles, size, local_particles, bins);
+        init_bins(n_local_particles, size, new_local_particles, bins);
 
         //
         //  save current step if necessary
