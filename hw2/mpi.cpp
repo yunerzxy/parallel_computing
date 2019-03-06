@@ -299,7 +299,6 @@ void exchange_moved(double size, imy_particle_t **local_particles_ptr,
                     int *n_local_particles) {
     std::vector<int> neighbor_ranks = get_rank_neighbors(rank);
     for (auto &nei_rank : neighbor_ranks) {
-        // get all bins in this nei_rank
         std::vector<int> cur_bins = bins_of_rank(nei_rank);
         std::vector<imy_particle_t> moved_particles;
         for (auto b_idx : cur_bins)
@@ -311,15 +310,14 @@ void exchange_moved(double size, imy_particle_t **local_particles_ptr,
         MPI_Ibsend(buf, n_moved_p, PARTICLE, nei_rank, 0, MPI_COMM_WORLD, &request);
         MPI_Request_free(&request);
     }
-
     imy_particle_t *new_local_particles = new imy_particle_t[n];
     imy_particle_t *cur_pos = new_local_particles;
     for(auto &nei_rank : neighbor_ranks){
         MPI_Status status;
         MPI_Recv(cur_pos, n, PARTICLE, nei_rank, 0, MPI_COMM_WORLD, &status);
-        int num_particles_received;
-        MPI_Get_count(&status, PARTICLE, &num_particles_received);
-        cur_pos += num_particles_received;
+        int n_particles_received;
+        MPI_Get_count(&status, PARTICLE, &n_particles_received);
+        cur_pos += n_particles_received;
     }
     for(auto &b_idx : local_bin_idxs){
         for(auto &p : bins[b_idx].particles){
@@ -327,15 +325,13 @@ void exchange_moved(double size, imy_particle_t **local_particles_ptr,
             cur_pos++;
         }
     }
-
     // Apply new_local_particles
     delete[] *local_particles_ptr;
     *local_particles_ptr = new_local_particles;
     *n_local_particles = cur_pos - new_local_particles;
-
     // Rebin all particles
     bins.clear();
-    init_bins(*n_local_particles, size2, *local_particles_ptr, bins);
+    init_bins(*n_local_particles, size, *local_particles_ptr, bins);
 }
 
 void scatter_particles(double size, imy_particle_t *particles, imy_particle_t *local_particles,
