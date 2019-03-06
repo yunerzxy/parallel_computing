@@ -499,15 +499,15 @@ int main(int argc, char **argv)
             MPI_Request_free(&request);
         }
         // neighbors collect border particles and assign to bins
-        imy_particle_t *cur_pos = local_particles + *n_local_particles;
+        imy_particle_t *cur_pos = local_particles + n_local_particles;
         int n_particles_received = 0;
         for (auto &nei_rank : nei_ranks){
             MPI_Status status;
             MPI_Recv(cur_pos, n, PARTICLE, nei_rank, 0, MPI_COMM_WORLD, &status);
             MPI_Get_count(&status, PARTICLE, &n_particles_received);
-            assign_particles_to_bins(n_particles_received, canvas_side_len, cur_pos, bins);
+            assign_particles_to_bins(n_particles_received, size, cur_pos, bins);
             cur_pos += n_particles_received;
-            *n_local_particles += n_particles_received;
+            n_local_particles += n_particles_received;
         }
 
         // Zero out the accelerations
