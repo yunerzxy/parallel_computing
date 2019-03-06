@@ -7,4 +7,106 @@
 #SBATCH -o mpi32.%j.stdout
 #SBATCH -e mpi32.%j.error
 
-srun -N 32 -n 32 ./mpi -n 500 -o mpi.txt  # adjust -n here as well
+#srun -N 32 -n 32 ./mpi -n 500 -o mpi.txt  # adjust -n here as well
+
+# strong scaling n = 1000
+srun -n 1 -N 1 ./mpi -n 1000 -no -o
+srun -n 2 -N 2 ./mpi -n 1000 -no -o
+srun -n 4 -N 4 ./mpi -n 1000 -no -o 
+srun -n 6 -N 6 ./mpi -n 1000 -no -o
+srun -n 12 -N 12 ./mpi -n 1000 -no -o 
+srun -n 16 -N 16 ./mpi -n 1000 -no -o 
+srun -n 24 -N 24 ./mpi -n 1000 -no -o 
+srun -n 32 -N 32 ./mpi -n 1000 -no -o
+
+# strong scaling n = 4000
+srun -n 1 -N 1 ./mpi -n 4000 -no -o
+srun -n 2 -N 2 ./mpi -n 4000 -no -o
+srun -n 4 -N 4 ./mpi -n 4000 -no -o 
+srun -n 6 -N 6 ./mpi -n 4000 -no -o
+srun -n 12 -N 12 ./mpi -n 4000 -no -o 
+srun -n 16 -N 16 ./mpi -n 4000 -no -o 
+srun -n 24 -N 24 ./mpi -n 4000 -no -o 
+srun -n 32 -N 32 ./mpi -n 4000 -no -o
+
+# strong scaling n = 8000
+srun -n 1 -N 1 ./mpi -n 8000 -no -o
+srun -n 2 -N 2 ./mpi -n 8000 -no -o
+srun -n 4 -N 4 ./mpi -n 8000 -no -o 
+srun -n 6 -N 6 ./mpi -n 8000 -no -o
+srun -n 12 -N 12 ./mpi -n 8000 -no -o 
+srun -n 16 -N 16 ./mpi -n 8000 -no -o 
+srun -n 24 -N 24 ./mpi -n 8000 -no -o 
+srun -n 32 -N 32 ./mpi -n 8000 -no -o
+
+# strong scaling n = 16000
+srun -n 1 -N 1 ./mpi -n 16000 -no -o
+srun -n 2 -N 2 ./mpi -n 16000 -no -o
+srun -n 4 -N 4 ./mpi -n 16000 -no -o 
+srun -n 6 -N 6 ./mpi -n 16000 -no -o
+srun -n 12 -N 12 ./mpi -n 16000 -no -o 
+srun -n 16 -N 16 ./mpi -n 16000 -no -o 
+srun -n 24 -N 24 ./mpi -n 16000 -no -o 
+srun -n 32 -N 32 ./mpi -n 16000 -no -o
+
+# strong scaling n = 24000
+srun -n 1 -N 1 ./mpi -n 24000 -no -o
+srun -n 2 -N 2 ./mpi -n 24000 -no -o
+srun -n 4 -N 4 ./mpi -n 24000 -no -o 
+srun -n 6 -N 6 ./mpi -n 24000 -no -o
+srun -n 12 -N 12 ./mpi -n 24000 -no -o 
+srun -n 16 -N 16 ./mpi -n 24000 -no -o 
+srun -n 24 -N 24 ./mpi -n 24000 -no -o 
+srun -n 32 -N 32 ./mpi -n 24000 -no -o
+
+# strong scaling n = 50000
+srun -n 1 -N 1 ./mpi -n 50000 -no -o
+srun -n 2 -N 2 ./mpi -n 50000 -no -o
+srun -n 4 -N 4 ./mpi -n 50000 -no -o 
+srun -n 6 -N 6 ./mpi -n 50000 -no -o
+srun -n 12 -N 12 ./mpi -n 50000 -no -o 
+srun -n 16 -N 16 ./mpi -n 50000 -no -o 
+srun -n 24 -N 24 ./mpi -n 50000 -no -o 
+srun -n 32 -N 32 ./mpi -n 50000 -no -o
+
+# weak scaling 500/p
+srun -n 2 -N 2 ./mpi -n 1000 -no -o
+srun -n 4 -N 4 ./mpi -n 2000 -no -o
+srun -n 6 -N 6 ./mpi -n 3000 -no -o
+srun -n 12 -N 12 ./mpi -n 6000 -no -o
+srun -n 16 -N 16 ./mpi -n 8000 -no -o
+srun -n 24 -N 24 ./mpi -n 12000 -no -o
+srun -n 32 -N 32 ./mpi -n 16000 -no -o
+
+# weak scaling 1000/p
+srun -n 2 -N 2 ./mpi -n 2000 -no -o
+srun -n 4 -N 4 ./mpi -n 4000 -no -o
+srun -n 6 -N 6 ./mpi -n 6000 -no -o
+srun -n 12 -N 12 ./mpi -n 12000 -no -o
+srun -n 16 -N 16 ./mpi -n 16000 -no -o
+srun -n 24 -N 24 ./mpi -n 24000 -no -o
+srun -n 32 -N 32 ./mpi -n 32000 -no -o
+
+# weak scaling 2000/p
+srun -n 2 -N 2 ./mpi -n 4000 -no -o
+srun -n 4 -N 4 ./mpi -n 8000 -no -o
+srun -n 6 -N 6 ./mpi -n 12000 -no -o
+srun -n 12 -N 12 ./mpi -n 24000 -no -o
+srun -n 16 -N 16 ./mpi -n 32000 -no -o
+srun -n 24 -N 24 ./mpi -n 48000 -no -o
+srun -n 32 -N 32 ./mpi -n 64000 -no -o
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
