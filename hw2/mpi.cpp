@@ -487,8 +487,28 @@ int main(int argc, char **argv)
         dmin = 1.0;
         davg = 0.0;
 
-        // Populate bins with neighboring bins
-        exchange_neighbors(size, local_particles, &n_local_particles, bins);
+        //exchange_neighbors(size, local_particles, &n_local_particles, bins);
+        // send border particles to neighbors
+        std::vector<int> nei_ranks = get_rank_neighbors(rank);
+        for(auto &nei_rank : nei_ranks){
+            std::vector<imy_particle_t> border_particles = get_rank_border_particles(nei_rank, bins);
+            int n_b_particles = border_particles.size();
+            const void *buf = n_b_particles == 0 ? 0 : &border_particles[0];
+            MPI_Request request;
+            MPI_Ibsend(buf, n_b_particles, PARTICLE, nei_rank, 0, MPI_COMM_WORLD, &request);
+            MPI_Request_free(&request);
+        }
+        // neighbors collect border particles and assign to bins
+        imy_particle_t *cur_pos = local_particles + *n_local_particles;
+        int n_particles_received = 0;
+        for (auto &nei_rank : nei_ranks){
+            MPI_Status status;
+            MPI_Recv(cur_pos, n, PARTICLE, nei_rank, 0, MPI_COMM_WORLD, &status);
+            MPI_Get_count(&status, PARTICLE, &n_particles_received);
+            assign_particles_to_bins(n_particles_received, size, cur_pos, bins);
+            cur_pos += n_particles_received;
+            *n_local_particles += n_particles_received;
+        }
 
         // Zero out the accelerations
         for (int i = 0; i < n_local_particles; ++i) {
