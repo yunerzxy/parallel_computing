@@ -298,21 +298,21 @@ void exchange_moved(double size, imy_particle_t **local_particles_ptr,
                     std::vector<bin_t> &bins, std::vector<int> &local_bin_idxs,
                     int *n_local_particles) {
     std::vector<int> neighbor_ranks = get_rank_neighbors(rank);
-    for (int i = 0; i < neighbor_ranks.size(); i++) {
+    for (auto &nei_rank : neighbor_ranks) {
+        // get all bins in this nei_rank
+        std::vector<int> cur_bins = bins_of_rank(nei_rank);
         std::vector<imy_particle_t> moved_particles;
-        for (int b_idx = 0; b_idx < n_bins; b_idx++) {
-            if (rank_of_bin(b_idx) == neighbor_ranks[i]) {
+        for (auto b_idx : cur_bins) {
+            //if (rank_of_bin(b_idx) == neighbor_ranks[i]) {
                 for(auto &it: bins[b_idx].incoming){
                     moved_particles.push_back(*it);
                 }
-            }
+            //}
         }
+        int n_moved_p = moved_particles.size();
+        const void *buf = n_moved_p == 0 ? 0 : &moved_particles[0];
         MPI_Request request;
-        if(moved_particles.empty()){
-            MPI_Ibsend(0, moved_particles.size(), PARTICLE, neighbor_ranks[i], 0, MPI_COMM_WORLD, &request);
-        } else {
-            MPI_Ibsend(&moved_particles[0], moved_particles.size(), PARTICLE, neighbor_ranks[i], 0, MPI_COMM_WORLD, &request);
-        }
+        MPI_Ibsend(buf, n_moved_p, PARTICLE, nei_rank, 0, MPI_COMM_WORLD, &request);
         MPI_Request_free(&request);
     }
 
