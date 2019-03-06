@@ -298,14 +298,16 @@ void exchange_moved(double size, imy_particle_t **local_particles_ptr,
                     std::vector<bin_t> &bins, std::vector<int> &local_bin_idxs,
                     int *n_local_particles) {
     std::vector<int> neighbor_ranks = get_rank_neighbors(rank);
-    for (int i = 0; i < neighbor_ranks.size(); i++) {
+    for (auto &nei_rank : neighbor_ranks) {
+        // get all bins in this nei_rank
+        std::vector<int> cur_bins = bins_of_rank(nei_rank);
         std::vector<imy_particle_t> moved_particles;
-        for (int b_idx = 0; b_idx < n_bins; b_idx++) {
-            if (rank_of_bin(b_idx) == neighbor_ranks[i]) {
+        for (auto b_idx : cur_bins) {
+            //if (rank_of_bin(b_idx) == neighbor_ranks[i]) {
                 for(auto &it: bins[b_idx].incoming){
                     moved_particles.push_back(*it);
                 }
-            }
+            //}
         }
         MPI_Request request;
         if(moved_particles.empty()){
@@ -345,6 +347,7 @@ void exchange_moved(double size, imy_particle_t **local_particles_ptr,
     bins.clear();
     init_bins(*n_local_particles, size2, *local_particles_ptr, bins);
 }
+
 
 void scatter_particles(double size, imy_particle_t *particles, imy_particle_t *local_particles,
                        int *n_local_particles) {
