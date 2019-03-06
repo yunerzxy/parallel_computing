@@ -1,0 +1,25 @@
+srun: Job 19543265 step creation temporarily disabled, retrying
+srun: Step created for job 19543265
+srun: Job 19543265 step creation temporarily disabled, retrying
+srun: Step created for job 19543265
+srun: Job 19543265 step creation temporarily disabled, retrying
+srun: Step created for job 19543265
+slurmstepd: error: execve(): /global/u1/y/yunerzxy/xiao-cs267/hw2/./mpi: Permission denied
+slurmstepd: error: execve(): /global/u1/y/yunerzxy/xiao-cs267/hw2/./mpi: Permission denied
+slurmstepd: error: execve(): /global/u1/y/yunerzxy/xiao-cs267/hw2/./mpi: Permission denied
+slurmstepd: error: execve(): /global/u1/y/yunerzxy/xiao-cs267/hw2/./mpi: Permission denied
+srun: error: nid00536: task 1: Exited with exit code 13
+srun: Terminating job step 19543265.63
+srun: error: nid00537: task 2: Exited with exit code 13
+srun: error: nid00538: task 3: Exited with exit code 13
+srun: error: nid00535: task 0: Exited with exit code 13
+srun: fatal: Can not execute ./mpi
+/var/spool/slurmd/job19543265/slurm_script: line 93: 21432 Aborted                 srun -n 6 -N 6 ./mpi -n 12000 -no -o
+srun: fatal: Can not execute ./mpi
+/var/spool/slurmd/job19543265/slurm_script: line 94: 21437 Aborted                 srun -n 12 -N 12 ./mpi -n 24000 -no -o
+srun: fatal: Can not execute ./mpi
+/var/spool/slurmd/job19543265/slurm_script: line 95: 21439 Aborted                 srun -n 16 -N 16 ./mpi -n 32000 -no -o
+srun: fatal: Can not execute ./mpi
+/var/spool/slurmd/job19543265/slurm_script: line 96: 21441 Aborted                 srun -n 24 -N 24 ./mpi -n 48000 -no -o
+srun: fatal: Can not execute ./mpi
+/var/spool/slurmd/job19543265/slurm_script: line 97: 21443 Aborted                 srun -n 32 -N 32 ./mpi -n 64000 -no -o
