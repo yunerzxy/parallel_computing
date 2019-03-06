@@ -1,0 +1,48 @@
+
+we only run square_dgemm
+
+
+optimizations:
+blocking
+	l1 blocking
+	register blocking
+	l2 blocking
+copy optimization
+	copy to aligned buffer
+	transpose? // this works
+vectorization // doesn't work on cori, is better off automated
+	examine assembly...
+	intrinsics (better off automated)
+	
+single-thread! no openmp
+
+TO DO:
+transpose + blocking
+recursive blocking
+
+TO RESEARCH:
+cache blocking
+aligned buffer?
+
+	
+scp nikitn@cori.nersc.gov:/project/projectdirs/mfa/NERSC-MFA/sshproxy.sh .
+
+blocking with local transpose:		10.9
+blocking with full transpose: 		11.2
+full transpose: 								13.5
+
+CRAY
+full transpose:								15.7
+blocked transpose:						13.5
+recursive transpose:						14.5
+
+
+
+module swap PrgEnv-intel PrgEnv-cray 
+	CC = cc
+	OPT = -O3 -h vector3
+	CFLAGS = $(OPT)
+	LDFLAGS =
+	# librt is needed for clock_gettime
+	LDLIBS = -lrt
+module swap PrgEnv-cray PrgEnv-intel 
