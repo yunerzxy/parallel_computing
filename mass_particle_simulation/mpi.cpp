@@ -200,7 +200,7 @@ std::vector<int> get_rank_neighbors(int rank) {
     return rank_neis;
 }
 
-void assign_particles_to_bins(int n, double canvas_side_len, imy_particle_t *particles, std::vector<bin_t> &bins) {
+void assign_particles(int n, double canvas_side_len, imy_particle_t *particles, std::vector<bin_t> &bins) {
     for (int i = 0; i < n; ++i) {
         imy_particle_t &p = particles[i];
         int b_idx = bin_of_particle(canvas_side_len, p);
@@ -214,7 +214,7 @@ void init_bins(int n, double size, imy_particle_t *particles, std::vector<bin_t>
         bin_t b;
         bins.push_back(b);
     }
-    assign_particles_to_bins(n, size, particles, bins);
+    assign_particles(n, size, particles, bins);
 }
 
 std::vector<int> bins_of_rank(int rank) {
@@ -367,7 +367,7 @@ int main(int argc, char **argv)
             MPI_Status status;
             MPI_Recv(cur_pos, n, PARTICLE, nei_rank, 0, MPI_COMM_WORLD, &status);
             MPI_Get_count(&status, PARTICLE, &n_particles_received);
-            assign_particles_to_bins(n_particles_received, size, cur_pos, bins);
+            assign_particles(n_particles_received, size, cur_pos, bins);
             cur_pos += n_particles_received;
             n_local_particles += n_particles_received;
         }
