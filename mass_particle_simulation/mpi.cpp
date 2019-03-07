@@ -215,10 +215,10 @@ void init_bins(int n, double size, imy_particle_t *particles, std::vector<bin_t>
     assign_particles_to_bins(n, size, particles, bins);
 }
 
-int rank_of_bin(int b_idx) {
-    int b_row = b_idx % n_bins_side;
-    return b_row / rows_per_proc;
-}
+// int rank_of_bin(int b_index) {
+//     int b_row_index = b_index % n_bins_side;
+//     return b_row / rows_per_proc;
+// }
 
 
 std::vector<int> bins_of_rank(int rank) {
@@ -325,7 +325,9 @@ int main(int argc, char **argv)
     for (int pro = cur_displs = counter = 0; pro < n_proc && rank == 0; cur_displs += counter_sends[pro], ++pro) {
         counter_send = 0;
         for (int i = 0; i < n; ++i) {
-            if (rank_of_bin(bin_of_particle(size, particles[i])) != pro)      continue;
+            int bin_idx = bin_of_particle(size, particles[i]);
+            int bin_rank = (bin_idx % n_bins_side) / rows_per_proc;
+            if (bin_rank != pro) continue;
             particles_by_bin[counter] = particles[i];
             counter_send++;
             counter++;
