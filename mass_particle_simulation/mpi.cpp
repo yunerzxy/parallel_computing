@@ -201,10 +201,11 @@ std::vector<int> get_rank_neighbors(int rank) {
 }
 
 void assign_particles_to_bins(int n, double canvas_side_len, imy_particle_t *particles, std::vector<bin_t> &bins) {
-    for (auto &p : *particles) {
-        int p.bin_idx = bin_of_particle(canvas_side_len, p);
+    for (int i = 0; i < n; ++i) {
+        imy_particle_t *p = particles[i];
         int b_idx = bin_of_particle(canvas_side_len, p);
-        bins[b_idx].add_particles(p);
+        *p.bin_idx = bin_of_particle(canvas_side_len, p);
+        bins[b_idx].add_particles(*p);
     }
 }
 
