@@ -186,9 +186,10 @@ void init_particles_mpi(int rank, int n, double size, imy_particle_t *p) {
 }
 
 int bin_of_particle(double canvas_side_len, imy_particle_t &p) {
-    double bin_side_len = canvas_side_len / n_bins_side;
-    int row_b = floor(p.particle.x / bin_side_len), col_b = floor(p.particle.y / bin_side_len);
-    return row_b + col_b * n_bins_side;
+    //double bin_side_len = canvas_side_len / n_bins_side;
+    int bin_row = p.particle.x / (canvas_side_len / n_bins_side); 
+    int bin_col = p.particle.y / (canvas_side_len / n_bins_side);
+    return bin_col * n_bins_side + bin_row;
 }
 
 std::vector<int> get_rank_neighbors(int rank) {
