@@ -6,4 +6,7 @@
 #SBATCH --gres=gpu:k80:1
 #SBATCH -t 00:10:00     
 ./serial -n 2000 -o serial.txt
+./serial -n 4000 -o serial.txt
+./serial -n 8000 -o serial.txt
+
 ./autocorrect -s serial.txt
