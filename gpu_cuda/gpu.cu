@@ -4,12 +4,13 @@
 #include <cuda.h>
 #include "common.h"
 
+/*
 #ifdef __CUDACC__
 #define CUDA_CALLABLE_MEMBER __host__ __device__
 #else
 #define CUDA_CALLABLE_MEMBER
 #endif
-
+*/
 #define NUM_THREADS 16
 #define NUM_PARTICLE_BIN 32 //hardcoded looks fine. We assume there would be at most 64 particle in each bin
 #define get_bin(p, bins_num, s)   (int)(p.x / (double)(s / bins_num)) + (int)(p.y / (double)(s / bins_num)) * bins_num
@@ -37,7 +38,7 @@ public:
         this->particles[this->n_particles] = par_id;
         this->n_particles++;
     }
-
+    /*
     CUDA_CALLABLE_MEMBER void update(int new_bin, int cur_bin, int p_id){
         if (new_bin != cur_bin) {
             this->change[this->n_change++] = p_id;
@@ -45,7 +46,7 @@ public:
             this->no_change[this->n_no_change++] = p_id;
         }
     }
-
+    */
     ~bin_t(){
         //no memory leak here
     }
