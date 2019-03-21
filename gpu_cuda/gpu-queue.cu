@@ -6,8 +6,8 @@
 #include "common.h"
 
 // stores particles in each bin
-template<typename T, std::size_t capacity>
-struc bin_t {
+template <typename T, std::size_t capacity>
+struct bin_t {
   int size = 0;
   T data[capacity]; // how many particles can be in the same bin
 
@@ -66,14 +66,14 @@ __device__ void binning(particle_t * particles, int n,
   }
 }
 
-__device__ clear_bins(particle_t* particles, bin_t<int, capacity>* bins,
+__device__ void clear_bins(particle_t* particles, bin_t<int, capacity>* bins,
                                                           int num_bins_side) {
   int tid = threadIdx.x + blockIdx.x * blockDim.x;
   if (tid >= n) return;
 
   int bin_x = particles[tid].x / cutoff,
       bin_y = particles[tid].y / cutoff;
-  for (auto& bin : bins) {
+  for (bin_t<int, capacity>& bin : bins) {
     bins[bin_x + bin_y * num_bins_side].clear();
   }
 }
@@ -99,8 +99,8 @@ __global__ void compute_forces_gpu_bin (particle_t* particles, int n,
   int bin_x = particles[tid].x / cutoff,
       bin_y = particles[tid].y / cutoff;
   for (int i = 0; i < 8; i++) { // find neighbor bins
-    nei_bin_x = bin_x + x_offset[i];
-    nei_bin_y = bin_y + y_offset[i];
+    int nei_bin_x = bin_x + x_offset[i];
+    int nei_bin_y = bin_y + y_offset[i];
     if (nei_bin_x < 0 || nei_bin_y < 0
       || nei_bin_x >= num_bins_side || nei_bin_y >= num_bins_side) continue;
     for (int& p_id : bins[nei_bin_x + nei_bin_y * num_bins_side].data) {
