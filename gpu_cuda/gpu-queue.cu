@@ -23,7 +23,7 @@ struct bin_t {
   }
 
   __device__ void clear() {size = 0;}
-}
+};
 
 #define NUM_THREADS 256
 const std::size_t capacity = 4; // experimental
