@@ -54,7 +54,7 @@ __device__ void apply_force_gpu(particle_t &particle, particle_t &neighbor)
 
 }
 
-__device__ void binning(particle_t * particles, int n,
+__global__ void binning(particle_t * particles, int n,
                         bin_t<int, capacity>* bins, int num_bins_side) {
   int tid = threadIdx.x + blockIdx.x * blockDim.x;
   if (tid >= n) return;
@@ -67,16 +67,16 @@ __device__ void binning(particle_t * particles, int n,
   }
 }
 
-__device__ void clear_bins(particle_t* particles, bin_t<int, capacity>* bins,
-                                                          int num_bins_side) {
+__global__ void clear_bins(particle_t* particles, bin_t<int, capacity>* bins,
+                                                  int n, int num_bins_side) {
   int tid = threadIdx.x + blockIdx.x * blockDim.x;
   if (tid >= n) return;
 
   int bin_x = particles[tid].x / cutoff,
       bin_y = particles[tid].y / cutoff;
-  for (bin_t<int, capacity>& bin : bins) {
+  //for (int i = 0; i < bins.size(); i++) {
     bins[bin_x + bin_y * num_bins_side].clear();
-  }
+  //}
 }
 
 __global__ void compute_forces_gpu(particle_t * particles, int n)
@@ -104,7 +104,8 @@ __global__ void compute_forces_gpu_bin (particle_t* particles, int n,
     int nei_bin_y = bin_y + y_offset[i];
     if (nei_bin_x < 0 || nei_bin_y < 0
       || nei_bin_x >= num_bins_side || nei_bin_y >= num_bins_side) continue;
-    for (int& p_id : bins[nei_bin_x + nei_bin_y * num_bins_side].data) {
+    for (int i = 0; i < bins[nei_bin_x + nei_bin_y * num_bins_side].size; i++) {
+      int p_id = bins[nei_bin_x + nei_bin_y * num_bins_side].data[i];
       apply_force_gpu(particles[tid], particles[p_id]);
     }
   }
