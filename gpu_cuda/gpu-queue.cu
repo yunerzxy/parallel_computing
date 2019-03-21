@@ -62,9 +62,9 @@ __global__ void binning(particle_t * particles, int n,
   int bin_x = particles[tid].x / cutoff,
       bin_y = particles[tid].y / cutoff;
   bool isAssigned = bins[bin_x + bin_y * num_bins_side].insert(tid);
-  if (!isAssigned) {
-    std::cout << "Overflowing bin! Increase capacity." << std::endl;
-  }
+  // if (!isAssigned) {
+  //   std::cout << "Overflowing bin! Increase capacity." << std::endl;
+  // }
 }
 
 __global__ void clear_bins(particle_t* particles, bin_t<int, capacity>* bins,
@@ -206,7 +206,7 @@ int main( int argc, char **argv )
         //
 	compute_forces_gpu <<< blks, NUM_THREADS >>> (d_particles, n);
 
-  clear_bins <<< blks, NUM_THREADS >>> ();
+  clear_bins <<< blks, NUM_THREADS >>> (d_particles, d_bins, n, num_bins_side);
         //
         //  move particles
         //
