@@ -6,7 +6,7 @@ CFLAGS = -O3 -arch=compute_37 -code=sm_37
 NVCCFLAGS = -O3 -arch=compute_37 -code=sm_37
 LIBS =
 
-TARGETS = serial gpu autograder naive-gpu gup-queue
+TARGETS = serial gpu autograder naive-gpu gpu-queue
 
 all:	$(TARGETS)
 
