@@ -27,8 +27,6 @@ struct bin_t {
 
 #define NUM_THREADS 256
 const std::size_t capacity = 4; // experimental
-const int x_offset[8] = {-1, 0, 1, -1, 1, -1, 0, 1};
-const int y_offset[8] = {-1, -1, -1, 0, 0, 1, 1, 1};
 extern double size;
 //
 //  benchmarking program
@@ -95,7 +93,9 @@ __global__ void compute_forces_gpu_bin (particle_t* particles, int n,
                               bin_t<int, capacity>* bins, int num_bins_side) {
   int tid = threadIdx.x + blockIdx.x * blockDim.x;
   if (tid >= n) return;
-
+  // offset
+  const int x_offset[8] = {-1, 0, 1, -1, 1, -1, 0, 1};
+  const int y_offset[8] = {-1, -1, -1, 0, 0, 1, 1, 1};
   particles[tid].ax = particles[tid].ay = 0;
   int bin_x = particles[tid].x / cutoff,
       bin_y = particles[tid].y / cutoff;
