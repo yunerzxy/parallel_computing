@@ -3,6 +3,7 @@
 #include <assert.h>
 #include <math.h>
 #include <cuda.h>
+#include <iostream>
 #include "common.h"
 
 // stores particles in each bin
@@ -59,8 +60,8 @@ __device__ void binning(particle_t * particles, int n,
   if (tid >= n) return;
 
   int bin_x = particles[tid].x / cutoff,
-      bin_y = particles[tid].y / curoff;
-  bool isAssigned = bins[bin_x + bin_y * num_bins_side].insert(particles[tid]);
+      bin_y = particles[tid].y / cutoff;
+  bool isAssigned = bins[bin_x + bin_y * num_bins_side].insert(tid);
   if (!isAssigned) {
     std::cout << "Overflowing bin! Increase capacity." << std::endl;
   }
