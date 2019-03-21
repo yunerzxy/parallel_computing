@@ -16,6 +16,8 @@ gpu: gpu.o common.o
 	$(CC) -o $@ $(NVCCLIBS) gpu.o common.o
 naive-gpu: naive-gpu.o common.o
 	$(CC) -o $@ $(NVCCLIBS) naive-gpu.o common.o
+gpu-queue: gpu-queue.o common.o
+	$(CC) -o $@ $(NVCCLIBS) gpu-queue.o common.o
 autograder: autograder.o common.o
 	$(CC) -o $@ $(LIBS) autograder.o common.o
 
@@ -29,6 +31,8 @@ common.o: common.cu common.h
 	$(CC) -c $(CFLAGS) common.cu
 naive-gpu.o: naive-gpu.cu common.h
 	$(CC) -c $(NVCCFLAGS) naive-gpu.cu
+gpu-queue.o: gpu-queue.cu common.h
+	$(CC) -c $(NVCCFLAGS) gpu-queue.cu
 
 clean:
 	rm -f *.o $(TARGETS) *.stdout *.txt
