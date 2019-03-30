@@ -4,8 +4,13 @@
 #include "kmer_t.hpp"
 
 struct HashMap {
-  std::vector <kmer_pair> data;
-  std::vector <int> used;
+  //std::vector <kmer_pair> data;
+  //std::vector <int> used;
+  std::vector<upcxx::global_ptr<kmer_pair>> data;
+  std::vector<upcxx::global_ptr<int>> used;
+
+  int n_proc;
+  int my_rank;
 
   size_t my_size;
 
@@ -30,7 +35,11 @@ struct HashMap {
 };
 
 HashMap::HashMap(size_t size) {
+  n_proc = upcxx::rank_n();
+  my_rank = upcxx::rank_me();
+
   my_size = size;
+  
   data.resize(size);
   used.resize(size, 0);
 }
@@ -38,9 +47,12 @@ HashMap::HashMap(size_t size) {
 bool HashMap::insert(const kmer_pair &kmer) {
   uint64_t hash = kmer.hash();
   uint64_t probe = 0;
+  uint64_t p = 1;
   bool success = false;
   do {
-    uint64_t slot = (hash + probe++) % size();
+    //uint64_t slot = (hash + probe++) % size();
+    uint64_t slot = (hash + probe) % size();
+    probe = p * p++; // quadratic probing
     success = request_slot(slot);
     if (success) {
       write_slot(slot, kmer);
