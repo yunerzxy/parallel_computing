@@ -17,13 +17,7 @@
 int main(int argc, char **argv) {
   upcxx::init();
 
-  // TODO: remove this, when you start writing
   // parallel implementation.
-  if (upcxx::rank_n() > 1) {
-    throw std::runtime_error("Error: parallel implementation not started yet!"
-      " (remove this when you start working.)");
-  }
-
   if (argc < 2) {
     BUtil::print("usage: srun -N nodes -n ranks ./kmer_hash kmer_file [verbose|test]\n");
     upcxx::finalize();
@@ -44,17 +38,16 @@ int main(int argc, char **argv) {
       std::to_string(ks) + "-mers, while this binary is compiled for " +
       std::to_string(KMER_LEN) + "-mers.  Modify packing.hpp and recompile.");
   }
-
+  // Total number of kmers from all ranks.
   size_t n_kmers = line_count(kmer_fname);
 
   // Load factor of 0.5
   size_t hash_table_size = n_kmers * (1.0 / 0.5);
-  HashMap hashmap(hash_table_size);
 
-  if (run_type == "verbose") {
-    BUtil::print("Initializing hash table of size %d for %d kmers.\n",
-      hash_table_size, n_kmers);
-  }
+  size_t nprocs = upcxx::rank_n();
+  size_t my_rank = upcxx::rank_me();
+
+  HashMap hashmap(hash_table_size);
 
   std::vector <kmer_pair> kmers = read_kmers(kmer_fname, upcxx::rank_n(), upcxx::rank_me());
 
@@ -62,22 +55,29 @@ int main(int argc, char **argv) {
     BUtil::print("Finished reading kmers.\n");
   }
 
+  //----------------------------------------------------------------------------------//
+  //------------build hashmap, insert all kmers into the hashmap with UPC-------------//
+  //----------------------------------------------------------------------------------//
+  upcxx::atomic_domain<int> ad({upcxx::atomic_op::fetch_add});  //Initializing atomic operation family, insertion of hashmap is dangerous! Need atomic operation.
   auto start = std::chrono::high_resolution_clock::now();
 
-  std::vector <kmer_pair> start_nodes;
+  std::vector <kmer_pair> start_nodes; //saves all start node for kmers, with F
 
+  //start building hashmap
   for (auto &kmer : kmers) {
-    bool success = hashmap.insert(kmer);
+    bool success = hashmap.insert(kmer, ad); //insert kmers
     if (!success) {
       throw std::runtime_error("Error: HashMap is full!");
     }
 
     if (kmer.backwardExt() == 'F') {
-      start_nodes.push_back(kmer);
+      start_nodes.push_back(kmer);           //insert starting kmers with F
     }
   }
+
   auto end_insert = std::chrono::high_resolution_clock::now();
   upcxx::barrier();
+  ad.destroy();
 
   double insert_time = std::chrono::duration <double> (end_insert - start).count();
   if (run_type != "test") {
@@ -85,9 +85,13 @@ int main(int argc, char **argv) {
   }
   upcxx::barrier();
 
+  //----------------------------------------------------------------------------------//
+  //------------build contig, connect kmers-------------------------------------------//
+  //----------------------------------------------------------------------------------//
   auto start_read = std::chrono::high_resolution_clock::now();
-
+  //list of contigs
   std::list <std::list <kmer_pair>> contigs;
+  //check all starting kmers
   for (const auto &start_kmer : start_nodes) {
     std::list <kmer_pair> contig;
     contig.push_back(start_kmer);
