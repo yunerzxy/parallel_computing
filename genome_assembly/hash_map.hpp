@@ -32,6 +32,7 @@ struct HashMap {
   bool request_slot(uint64_t slot, upcxx::atomic_domain<int>& ad);
   bool slot_used(uint64_t slot);
 
+  int index(uint64_t slot);
   int offset(uint64_t slot);
 };
 
@@ -44,8 +45,6 @@ HashMap::HashMap(size_t size) {
   data.resize(n_proc, nullptr);
   used.resize(n_proc, 0);
 
-  //data[upcxx::rank_me()] = upcxx::new_array<kmer_pair>(my_size);
-  //used[upcxx::rank_me()] = upcxx::new_array<int>(my_size);
   for (int i = 0; i < n_proc; ++i) {
     if (upcxx::rank_me() == i) {
       data[i] = upcxx::new_array<kmer_pair>(my_size);
@@ -92,7 +91,7 @@ bool HashMap::find(const pkmer_t &key, kmer_pair &val) {
 }
 
 bool HashMap::slot_used(uint64_t slot) {
-  upcxx::future<int> l_used = upcxx::rget(used[floor(slot / size())] + offset(slot));
+  upcxx::future<int> l_used = upcxx::rget(used[index(slot)] + offset(slot));
   int res = l_used.wait();
   return res != 0;
 }
@@ -100,23 +99,27 @@ bool HashMap::slot_used(uint64_t slot) {
 void HashMap::write_slot(uint64_t slot, const kmer_pair &kmer) {
   if (slot >= global_size || slot < 0) 
     throw std::runtime_error("out of scope");
-  upcxx::rput(kmer, data[floor(slot / size())] + offset(slot)).wait();
+  upcxx::rput(kmer, data[index(slot)] + offset(slot)).wait();
 }
 
 kmer_pair HashMap::read_slot(uint64_t slot) {
   if (slot >= global_size || slot < 0) 
     throw std::runtime_error("out of scope");
-  return upcxx::rget(data[floor(slot / size())] + offset(slot)).wait();
+  return upcxx::rget(data[index(slot)] + offset(slot)).wait();
 }
 
 bool HashMap::request_slot(uint64_t slot, upcxx::atomic_domain<int>& ad) {
-  upcxx::future<int> l_used = ad.fetch_add(used[floor(slot / size())] + offset(slot), 1, std::memory_order_relaxed);
+  upcxx::future<int> l_used = ad.fetch_add(used[index(slot)] + offset(slot), 1, std::memory_order_relaxed);
   int res = l_used.wait();
   return res == 0;
 }
 
 size_t HashMap::size() const noexcept {
   return my_size;
+}
+
+int HashMap::index(uint64_t slot) {
+  return floor(slot / size());
 }
 
 int HashMap::offset(uint64_t slot) {
