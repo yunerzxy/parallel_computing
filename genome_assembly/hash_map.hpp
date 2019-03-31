@@ -43,6 +43,7 @@ HashMap::HashMap(size_t size) {
   for (int i = 0; i < n_proc; ++i) {
     if (upcxx::rank_me() == i) {
       data[i] = upcxx::new_array<kmer_pair>(my_size);
+      used[i] = upcxx::new_array<int>(my_size);
     }
     data[i] = upcxx::broadcast(data[i], i).wait();
     used[i] = upcxx::broadcast(used[i], i).wait();
@@ -102,7 +103,7 @@ kmer_pair HashMap::read_slot(uint64_t slot) {
 }
 
 bool HashMap::request_slot(uint64_t slot, upcxx::atomic_domain<int>& ad) {
-  upcxx::future <int> l_used = ad.fetch_add(used[floor(slot / size())] + slot % my_size, 1, std::memory_order_relaxed);
+  upcxx::future <int> l_used = ad.fetch_add(used[floor(slot / size())] + slot % size(), 1, std::memory_order_relaxed);
   l_used.wait();
   return l_used.result() == 0;
 }
