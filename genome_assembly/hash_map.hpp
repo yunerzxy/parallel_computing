@@ -38,8 +38,8 @@ HashMap::HashMap(size_t size) {
   global_size = size;
   my_size = ceil(size / n_proc);
   //std::cout << "my_size type " << typeid(my_size).name() << std::endl;
-  data.resize(n_proc, nullptr);
-  used.resize(n_proc, 0);
+  data.resize(n_proc);
+  used.resize(n_proc);
 
   data[upcxx::rank_me()] = upcxx::new_array<kmer_pair>(my_size);
   used[upcxx::rank_me()] = upcxx::new_array<int>(my_size);
