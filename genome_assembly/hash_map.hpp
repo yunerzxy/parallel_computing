@@ -91,24 +91,24 @@ bool HashMap::find(const pkmer_t &key, kmer_pair &val) {
 }
 
 bool HashMap::slot_used(uint64_t slot) {
-  upcxx::future<int> l_used = upcxx::rget(used[floor(slot / size())] + slot % size());
+  upcxx::future<int> l_used = upcxx::rget(used[int(slot / size())] + slot % size());
   l_used.wait();
   return l_used.result() == 1;
 }
 
 void HashMap::write_slot(uint64_t slot, const kmer_pair &kmer) {
   if (slot >= global_size || slot < 0) return;
-  upcxx::rput(kmer, data[floor(slot / size())] + slot % size()).wait();
+  upcxx::rput(kmer, data[int(slot / size())] + slot % size()).wait();
 }
 
 kmer_pair HashMap::read_slot(uint64_t slot) {
   if (slot >= global_size || slot < 0) 
     throw std::runtime_error("out of scope");
-  return upcxx::rget(data[floor(slot / size())] + slot % size()).wait();
+  return upcxx::rget(data[int(slot / size())] + slot % size()).wait();
 }
 
 bool HashMap::request_slot(uint64_t slot, upcxx::atomic_domain<int>& ad) {
-  upcxx::future <int> l_used = ad.fetch_add(used[floor(slot / size())] + slot % size(), 1, std::memory_order_relaxed);
+  upcxx::future <int> l_used = ad.fetch_add(used[int(slot / size())] + slot % size(), 1, std::memory_order_relaxed);
   l_used.wait();
   return l_used.result() == 0;
 }
