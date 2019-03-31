@@ -66,15 +66,17 @@ bool HashMap::insert(const kmer_pair &kmer, upcxx::atomic_domain<int>& ad) {
   return success;
 }
 
-bool HashMap::find(const pkmer_t &key_kmer, kmer_pair &val_kmer) {
-  uint64_t hash = key_kmer.hash();
+bool HashMap::find(const pkmer_t &key, kmer_pair &val) {
+  uint64_t hash = key.hash();
   uint64_t probe = 0;
+  uint64_t p = 1;
   bool success = false;
   do {
-    uint64_t slot = (hash + probe++) % global_size;
+    uint64_t slot = (hash + probe) % global_size;
+    probe = p * p++;
     if (slot_used(slot)) {
-      val_kmer = read_slot(slot);
-      if (val_kmer.kmer == key_kmer) {
+      val = read_slot(slot);
+      if (val.kmer == key) {
         success = true;
       }
     }
