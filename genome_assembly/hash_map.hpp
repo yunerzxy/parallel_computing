@@ -11,7 +11,7 @@ struct HashMap {
 
   size_t my_size;
   size_t global_size;
-  int nprocs;
+  int n_proc;
 
   size_t size() const noexcept;
 
@@ -34,18 +34,19 @@ struct HashMap {
 };
 
 HashMap::HashMap(size_t size) {
-  nprocs = upcxx::rank_n();
-  //my_rank = upcxx::rank_me();
-  my_size = size_t ((size + nprocs -1 )/ nprocs);
+  n_proc = upcxx::rank_n();
   global_size = size;
+  my_size = ceil(size / n_proc);
+  data.resize(n_proc, nullptr);
+  used.resize(n_proc, 0);
 
-  data.resize(nprocs);
-  used.resize(nprocs);
-  data[upcxx::rank_me()] = upcxx::new_array<kmer_pair>(my_size);
-  used[upcxx::rank_me()] = upcxx::new_array<int>(my_size);
-  for (int i=0; i<nprocs; i++){
-    data[i] = upcxx::broadcast(data[i],i).wait();
-    used[i] = upcxx::broadcast(used[i],i).wait();
+  for (int i = 0; i < n_proc; ++i) {
+    if (upcxx::rank_me() == i) {
+      data[i] = upcxx::new_array<kmer_pair>(my_size);
+      used[i] = upcxx::new_array<int>(my_size);
+    }
+    data[i] = upcxx::broadcast(data[i], i).wait();
+    used[i] = upcxx::broadcast(used[i], i).wait();
   }
 }
 
@@ -96,13 +97,13 @@ bool HashMap::slot_used(uint64_t slot) {
 }
 
 void HashMap::write_slot(uint64_t slot, const kmer_pair &kmer) {
-  if (slot >= size() || slot < 0) return;
+  if (slot >= global_size || slot < 0) return;
   upcxx::rput(kmer, data[floor(slot / size())] + slot % size()).wait();
 }
 
 kmer_pair HashMap::read_slot(uint64_t slot) {
-  // if (slot >= global_size || slot < 0) 
-  //   throw std::runtime_error("out of scope");
+  if (slot >= global_size || slot < 0) 
+    throw std::runtime_error("out of scope");
   return upcxx::rget(data[floor(slot / size())] + slot % size()).wait();
 }
 
