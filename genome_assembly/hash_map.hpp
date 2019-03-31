@@ -97,7 +97,7 @@ void HashMap::write_slot(uint64_t slot, const kmer_pair &kmer) {
 }
 
 kmer_pair HashMap::read_slot(uint64_t slot) {
-  if (slot >= size() || slot < 0) 
+  if (slot >= global_size || slot < 0) 
     throw std::runtime_error("out of scope");
   return upcxx::rget(data[floor(slot / size())] + slot % size()).wait();
 }
