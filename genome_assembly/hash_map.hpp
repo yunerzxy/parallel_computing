@@ -29,7 +29,7 @@ struct HashMap {
   kmer_pair read_slot(uint64_t slot);
 
   // Request a slot or check if it's already used.
-  bool request_slot(uint64_t slot);
+  bool request_slot(uint64_t slot, upcxx::atomic_domain<int>& ad);
   bool slot_used(uint64_t slot);
 };
 
@@ -49,7 +49,7 @@ HashMap::HashMap(size_t size) {
   }
 }
 
-bool HashMap::insert(const kmer_pair &kmer) {
+bool HashMap::insert(const kmer_pair &kmer, upcxx::atomic_domain<int>& ad) {
   uint64_t hash = kmer.hash();
   uint64_t probe = 0;
   uint64_t p = 1;
@@ -58,7 +58,7 @@ bool HashMap::insert(const kmer_pair &kmer) {
     //uint64_t slot = (hash + probe++) % size();
     uint64_t slot = (hash + probe) % global_size;
     probe = p * p++; // quadratic probing
-    success = request_slot(slot);
+    success = request_slot(slot, ad);
     if (success) {
       write_slot(slot, kmer);
     }
@@ -84,7 +84,7 @@ bool HashMap::find(const pkmer_t &key_kmer, kmer_pair &val_kmer) {
 
 bool HashMap::slot_used(uint64_t slot) {
   upcxx::future<int> l_used = upcxx::rget(used[floor(slot / size())] + slot % size());
-  return local_used.wait().result() == 1;
+  return l_used.wait().result() == 1;
 }
 
 void HashMap::write_slot(uint64_t slot, const kmer_pair &kmer) {
@@ -93,7 +93,8 @@ void HashMap::write_slot(uint64_t slot, const kmer_pair &kmer) {
 }
 
 kmer_pair HashMap::read_slot(uint64_t slot) {
-  if (slot >= size() || slot < 0) return;
+  if (slot >= size() || slot < 0) 
+    throw std::runtime_error("out of scope");
   return upcxx::rget(data[floor(slot / size())] + slot % size()).wait();
 }
 
