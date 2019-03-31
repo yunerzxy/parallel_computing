@@ -38,8 +38,8 @@ struct HashMap {
 HashMap::HashMap(size_t size) {
   n_proc = upcxx::rank_n();
   global_size = size;
-  //my_size = ceil(size / n_proc);
-  my_size = size_t ((size + n_proc)/ n_proc);
+  my_size = size_t(ceil(size / n_proc));
+  //my_size = size_t ((size + n_proc)/ n_proc);
   //std::cout << "my_size type " << typeid(my_size).name() << std::endl;
   data.resize(n_proc, nullptr);
   used.resize(n_proc, 0);
