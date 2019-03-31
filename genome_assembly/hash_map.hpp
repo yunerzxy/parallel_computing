@@ -31,6 +31,8 @@ struct HashMap {
   // Request a slot or check if it's already used.
   bool request_slot(uint64_t slot, upcxx::atomic_domain<int>& ad);
   bool slot_used(uint64_t slot);
+
+  int which_rank(uint64_t slot);
 };
 
 HashMap::HashMap(size_t size) {
@@ -38,8 +40,8 @@ HashMap::HashMap(size_t size) {
   global_size = size;
   my_size = ceil(size / n_proc);
   //std::cout << "my_size type " << typeid(my_size).name() << std::endl;
-  data.resize(n_proc);
-  used.resize(n_proc);
+  data.resize(n_proc, nullptr);
+  used.resize(n_proc, 0);
 
   data[upcxx::rank_me()] = upcxx::new_array<kmer_pair>(my_size);
   used[upcxx::rank_me()] = upcxx::new_array<int>(my_size);
@@ -89,7 +91,7 @@ bool HashMap::find(const pkmer_t &key, kmer_pair &val) {
 }
 
 bool HashMap::slot_used(uint64_t slot) {
-  upcxx::future<int> l_used = upcxx::rget(used[floor(slot / size())] + slot % size());
+  upcxx::future<int> l_used = upcxx::rget(used[which_rank(slot)] + slot % size());
   l_used.wait();
   return l_used.result() != 0;
 }
@@ -97,21 +99,28 @@ bool HashMap::slot_used(uint64_t slot) {
 void HashMap::write_slot(uint64_t slot, const kmer_pair &kmer) {
   if (slot >= global_size || slot < 0) 
     throw std::runtime_error("out of scope");
-  upcxx::rput(kmer, data[floor(slot / size())] + slot % size()).wait();
+  upcxx::rput(kmer, data[which_rank(slot)] + slot % size()).wait();
 }
 
 kmer_pair HashMap::read_slot(uint64_t slot) {
   if (slot >= global_size || slot < 0) 
     throw std::runtime_error("out of scope");
-  return upcxx::rget(data[floor(slot / size())] + slot % size()).wait();
+  return upcxx::rget(data[which_rank(slot)] + slot % size()).wait();
 }
 
 bool HashMap::request_slot(uint64_t slot, upcxx::atomic_domain<int>& ad) {
-  upcxx::future <int> l_used = ad.fetch_add(used[floor(slot / size())] + slot % size(), 1, std::memory_order_relaxed);
+  upcxx::future<int> l_used = ad.fetch_add(used[which_rank(slot)] + slot % size(), 1, std::memory_order_relaxed);
   l_used.wait();
   return l_used.result() == 0;
 }
 
 size_t HashMap::size() const noexcept {
   return my_size;
+}
+
+int HashMap::which_rank(uint64_t slot) {
+  if (slot >= global_size || slot <0){
+    throw std::runtime_error("Error: input has to be in [0, global_size-1]. ");
+  }
+  return int(slot / my_size);
 }
