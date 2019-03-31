@@ -84,7 +84,7 @@ bool HashMap::find(const pkmer_t &key_kmer, kmer_pair &val_kmer) {
 
 bool HashMap::slot_used(uint64_t slot) {
   upcxx::future<int> l_used = upcxx::rget(used[floor(slot / size())] + slot % size());
-  return l_used.wait().result() == 1;
+  return l_used.result().wait() == 1;
 }
 
 void HashMap::write_slot(uint64_t slot, const kmer_pair &kmer) {
