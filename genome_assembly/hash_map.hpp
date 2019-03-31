@@ -82,6 +82,10 @@ bool HashMap::find(const pkmer_t &key, kmer_pair &val) {
       }
     }
   } while (!success && probe < global_size);
+    if (!success){
+    uint64_t slot = (hash + probe) % global_size;
+    printf("global_size: %d, probe: %d\n", global_size, probe);
+    printf("global slot: %d, slot rank: %d, local slot: %d\n", slot, slot / size(), slot % my_size);
   return success;
 }
 
