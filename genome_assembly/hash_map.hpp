@@ -34,7 +34,7 @@ struct HashMap {
 
   // Most important functions: insert and retrieve
   // k-mers from the hash table.
-  bool insert(const kmer_pair &kmer);
+  bool insert(const kmer_pair &kmer, upcxx::atomic_domain<int> &ad);
   bool find(const pkmer_t &key_kmer, kmer_pair &val_kmer);
 
   // Helper functions
@@ -44,7 +44,7 @@ struct HashMap {
   kmer_pair read_slot(uint64_t slot);
 
   // Request a slot or check if it's already used.
-  bool request_slot(uint64_t slot);
+  bool request_slot(uint64_t slot, upcxx::atomic_domain<int> &ad);
   bool slot_used(uint64_t slot);
 
   std::vector<upcxx::global_ptr<kmer_pair>> data;
@@ -73,14 +73,14 @@ HashMap::HashMap(size_t size) {
 // TODO: rput(local kmer_pair, gdataptr)
 // size is already global
 // find which rank it needs to write to.
-bool HashMap::insert(const kmer_pair &kmer) {
+bool HashMap::insert(const kmer_pair &kmer, upcxx::atomic_domain<int> &ad) {
   uint64_t hash = kmer.hash();
   uint64_t probe = 0;
   bool success = false;
 
   do {
     uint64_t slot = (hash + probe++) % global_size;
-    success = request_slot(slot);
+    success = request_slot(slot, ad);
     if (success) {
       write_slot(slot, kmer);
     }
@@ -126,17 +126,19 @@ void HashMap::write_slot(uint64_t slot, const kmer_pair &kmer) {
 
 kmer_pair HashMap::read_slot(uint64_t slot) {
   // return data[slot];
-  upcxx::future<kmer_pair> local_data = upcxx::rget(data[which_rank(slot)] + slot % my_size);
-  local_data.wait();
-  return local_data.result();
+  // upcxx::future<kmer_pair> local_data = upcxx::rget(data[which_rank(slot)] + slot % my_size);
+  // local_data.wait();
+  // return local_data.result();
+  return upcxx::rget(data[which_rank(slot)] + slot % my_size).wait();
 }
 
-bool HashMap::request_slot(uint64_t slot) {
-  // upcxx::future<int> local_used = upcxx::atomic_get(used[which_rank(slot)] + slot % my_size, std::memory_order_relaxed);
-  upcxx::future<int> local_used = upcxx::atomic_fetch_add(used[which_rank(slot)] + slot % my_size, 1, std::memory_order_relaxed);
+bool HashMap::request_slot(uint64_t slot, upcxx::atomic_domain<int> &ad) {
+  //upcxx::future<int> local_used = upcxx::atomic_get(used[which_rank(slot)] + slot % my_size, std::memory_order_relaxed);
+  //upcxx::future<int> local_used = upcxx::atomic_fetch_add(used[which_rank(slot)] + slot % my_size, 1, std::memory_order_relaxed);
+  upcxx::future <int> local_used = ad.fetch_add(used[which_rank(slot)] + slot % my_size, 1, std::memory_order_relaxed);
   // if (used[slot] != 0) {
   local_used.wait();
-  if (local_used.result() != 0){ 
+  if (local_used.result() != 0){
     return false;
   } else {
 //    used[slot] = 1;
