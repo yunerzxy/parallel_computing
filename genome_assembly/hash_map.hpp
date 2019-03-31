@@ -100,13 +100,9 @@ kmer_pair HashMap::read_slot(uint64_t slot) {
 }
 
 bool HashMap::request_slot(uint64_t slot, upcxx::atomic_domain<int>& ad) {
-  upcxx::future <int> local_used = ad.fetch_add(used[floor(slot / size())] + slot % my_size, 1, std::memory_order_relaxed);
-  local_used.wait();
-  if (local_used.result() != 0){
-    return false;
-  } else {
-    return true;
-  }
+  upcxx::future <int> l_used = ad.fetch_add(used[floor(slot / size())] + slot % my_size, 1, std::memory_order_relaxed);
+  l_used.wait();
+  return l_used.result() == 0;
 }
 
 size_t HashMap::size() const noexcept {
