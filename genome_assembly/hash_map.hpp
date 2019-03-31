@@ -56,7 +56,7 @@ bool HashMap::insert(const kmer_pair &kmer, upcxx::atomic_domain<int>& ad) {
   //uint64_t p = 1;
   bool success = false;
   do {
-    uint64_t slot = (hash + probe++) % size();
+    uint64_t slot = (hash + probe++) % global_size;
     //uint64_t slot = (hash + probe) % global_size;
     //probe = p * p++; // quadratic probing
     success = request_slot(slot, ad);
