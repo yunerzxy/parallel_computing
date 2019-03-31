@@ -32,6 +32,7 @@ struct HashMap {
   bool request_slot(uint64_t slot, upcxx::atomic_domain<int>& ad);
   bool slot_used(uint64_t slot);
 
+  // Helper functions to compute index in global memory
   int index(uint64_t slot);
   int offset(uint64_t slot);
 };
@@ -46,10 +47,11 @@ HashMap::HashMap(size_t size) {
   used.resize(n_proc, 0);
 
   for (int i = 0; i < n_proc; ++i) {
-    if (upcxx::rank_me() == i) {
+    if (upcxx::rank_me() == i) { // fill in by each rank
       data[i] = upcxx::new_array<kmer_pair>(my_size);
       used[i] = upcxx::new_array<int>(my_size);
     }
+    // broadcast 
     data[i] = upcxx::broadcast(data[i], i).wait();
     used[i] = upcxx::broadcast(used[i], i).wait();
   }
@@ -91,25 +93,33 @@ bool HashMap::find(const pkmer_t &key, kmer_pair &val) {
 }
 
 bool HashMap::slot_used(uint64_t slot) {
+  // asynchronous, get value from remote rank
   upcxx::future<int> l_used = upcxx::rget(used[index(slot)] + offset(slot));
-  int res = l_used.wait();
+  int res = l_used.wait(); // wait until other ranks are ready
   return res != 0;
 }
 
 void HashMap::write_slot(uint64_t slot, const kmer_pair &kmer) {
   if (slot >= global_size || slot < 0) 
     throw std::runtime_error("out of scope");
+
+  // one-sided remote put
   upcxx::rput(kmer, data[index(slot)] + offset(slot)).wait();
 }
 
 kmer_pair HashMap::read_slot(uint64_t slot) {
   if (slot >= global_size || slot < 0) 
     throw std::runtime_error("out of scope");
+
+  // one-sided remote get
   return upcxx::rget(data[index(slot)] + offset(slot)).wait();
 }
 
 bool HashMap::request_slot(uint64_t slot, upcxx::atomic_domain<int>& ad) {
+  // obtain remote global ptr
+  // then increment target rank asynchronously
   upcxx::future<int> l_used = ad.fetch_add(used[index(slot)] + offset(slot), 1, std::memory_order_relaxed);
+  
   int res = l_used.wait();
   return res == 0;
 }
