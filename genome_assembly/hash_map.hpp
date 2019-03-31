@@ -19,7 +19,7 @@ struct HashMap {
 
   // Most important functions: insert and retrieve
   // k-mers from the hash table.
-  bool insert(const kmer_pair &kmer);
+  bool insert(const kmer_pair &kmer, upcxx::atomic_domain<int>& ad);
   bool find(const pkmer_t &key_kmer, kmer_pair &val_kmer);
 
   // Helper functions
@@ -99,7 +99,7 @@ kmer_pair HashMap::read_slot(uint64_t slot) {
 }
 
 bool HashMap::request_slot(uint64_t slot, upcxx::atomic_domain<int>& ad) {
-  upcxx::future <int> local_used = ad.fetch_add(used[which_rank(slot)] + slot % my_size, 1, std::memory_order_relaxed);
+  upcxx::future <int> local_used = ad.fetch_add(used[floor(slot / size())] + slot % my_size, 1, std::memory_order_relaxed);
   local_used.wait();
   if (local_used.result() != 0){
     return false;
