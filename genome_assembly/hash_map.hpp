@@ -39,7 +39,7 @@ HashMap::HashMap(size_t size) {
   n_proc = upcxx::rank_n();
   global_size = size;
   std::cout << "global size " << size << std::endl;
-  my_size = ceil(size / n_proc);
+  my_size = ceil(1.0 * size / n_proc);
   std::cout << "my_size " << my_size << std::endl;
   size_t my_size_2 = size_t ((size + n_proc - 1)/ n_proc);
   std::cout << "my_size_2 " << my_size_2 << std::endl;
