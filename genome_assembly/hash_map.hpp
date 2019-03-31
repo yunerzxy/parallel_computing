@@ -52,12 +52,12 @@ HashMap::HashMap(size_t size) {
 bool HashMap::insert(const kmer_pair &kmer, upcxx::atomic_domain<int>& ad) {
   uint64_t hash = kmer.hash();
   uint64_t probe = 0;
-  uint64_t p = 1;
+  //uint64_t p = 1;
   bool success = false;
   do {
-    //uint64_t slot = (hash + probe++) % size();
-    uint64_t slot = (hash + probe) % global_size;
-    probe = p * p++; // quadratic probing
+    uint64_t slot = (hash + probe++) % size();
+    //uint64_t slot = (hash + probe) % global_size;
+    //probe = p * p++; // quadratic probing
     success = request_slot(slot, ad);
     if (success) {
       write_slot(slot, kmer);
@@ -69,11 +69,11 @@ bool HashMap::insert(const kmer_pair &kmer, upcxx::atomic_domain<int>& ad) {
 bool HashMap::find(const pkmer_t &key, kmer_pair &val) {
   uint64_t hash = key.hash();
   uint64_t probe = 0;
-  uint64_t p = 1;
+  //uint64_t p = 1;
   bool success = false;
   do {
-    uint64_t slot = (hash + probe) % global_size;
-    probe = p * p++;
+    uint64_t slot = (hash + probe++) % global_size;
+    //probe = p * p++;
     if (slot_used(slot)) {
       val = read_slot(slot);
       if (val.kmer == key) {
