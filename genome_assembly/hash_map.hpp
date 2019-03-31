@@ -35,7 +35,7 @@ struct HashMap {
 
 HashMap::HashMap(size_t size) {
   nprocs = upcxx::rank_n();
-  my_rank = upcxx::rank_me();
+  //my_rank = upcxx::rank_me();
   my_size = size_t ((size + nprocs -1 )/ nprocs);
   global_size = size;
 
