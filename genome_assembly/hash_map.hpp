@@ -37,15 +37,17 @@ HashMap::HashMap(size_t size) {
   n_proc = upcxx::rank_n();
   global_size = size;
   my_size = ceil(size / n_proc);
-  std::cout << "my_size type " << typeid(my_size).name() << std::endl;
+  //std::cout << "my_size type " << typeid(my_size).name() << std::endl;
   data.resize(n_proc, nullptr);
   used.resize(n_proc, 0);
 
+  data[upcxx::rank_me()] = upcxx::new_array<kmer_pair>(my_size);
+  used[upcxx::rank_me()] = upcxx::new_array<int>(my_size);
   for (int i = 0; i < n_proc; ++i) {
-    if (upcxx::rank_me() == i) {
-      data[i] = upcxx::new_array<kmer_pair>(my_size);
-      used[i] = upcxx::new_array<int>(my_size);
-    }
+    // if (upcxx::rank_me() == i) {
+    //   data[i] = upcxx::new_array<kmer_pair>(my_size);
+    //   used[i] = upcxx::new_array<int>(my_size);
+    // }
     data[i] = upcxx::broadcast(data[i], i).wait();
     used[i] = upcxx::broadcast(used[i], i).wait();
   }
@@ -83,11 +85,6 @@ bool HashMap::find(const pkmer_t &key, kmer_pair &val) {
       }
     }
   } while (!success && probe < global_size);
-  if (!success){
-    uint64_t slot = (hash + probe) % global_size;
-    printf("global_size: %d, probe: %d\n", global_size, probe);
-    printf("global slot: %d, slot rank: %d, local slot: %d\n", slot, slot / size(), slot % my_size);
-  }
   return success;
 }
 
