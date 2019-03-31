@@ -11,7 +11,7 @@ struct HashMap {
 
   size_t my_size;
   size_t global_size;
-  int n_proc;
+  int nprocs;
 
   size_t size() const noexcept;
 
