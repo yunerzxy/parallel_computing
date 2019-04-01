@@ -39,6 +39,8 @@ dna_path=/global/project/projectdirs/mp309/cs267-spr2018/hw3-datasets/
 core=(1 2 4 8 16 32)
 node={1 2 4 8}
 
+export GASNET_MAX_SEGSIZE=5000MB/H
+export UPCXX_SEGMENT_MB=5000
 
 echo '------Strong Scaling: 51-kmer large.txt file test result-------'
 
@@ -46,8 +48,6 @@ file=large.txt
 for value in "${core[@]}"
 do
 	echo 'n = ' $value
-	export UPCXX_SEGMENT_MB=256
-	export GASNET_MAX_SEGSIZE=8GB
 	srun -N 1 -n $value ./kmer_hash $dna_path$file
 done
 
@@ -58,8 +58,6 @@ file=human-chr14-synthetic.txt
 for value in "${core[@]}"
 do
 	echo 'n = ' $value
-	export UPCXX_SEGMENT_MB=256
-	export GASNET_MAX_SEGSIZE=8GB
 	srun -N 1 -n $value ./kmer_hash $dna_path$file
 done
 
