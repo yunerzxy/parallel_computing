@@ -32,8 +32,8 @@ core=(1 2 4 8 16 32)
 # done
 
 file=test.txt
-for value in "${core[@]"
+for value in "${core[@]}"
 do
-	echo 'n =' $value
+	echo 'n = ' $value
 	srun -N 1 -n $value ./kmer_hash $dna_path$file
 done
